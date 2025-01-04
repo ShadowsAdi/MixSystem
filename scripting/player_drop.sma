@@ -7,7 +7,7 @@
 #define VERSION "1.0"
 #define AUTHOR  "Shadows Adi"
 
-#define TASK_CHECK_TIME random_num(3721, 19210)
+#define TASK_CHECK_TIME 19210
 
 enum _:PlayerData
 {
