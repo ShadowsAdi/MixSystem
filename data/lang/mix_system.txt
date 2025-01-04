@@ -1,0 +1,271 @@
+[en]
+YOU_DONT_HAVE_ACCESS = ^1You do not have access to this command!
+
+MIX_NEEDS_TEN_PLAYERS = ^1The mix requires^4 10 players^1 to start.
+
+MIX_ALREADY_STARTED = ^1The mix has already started!
+MIX_STARTED_BY_YOU = ^1The mix was started by ^4You^1.
+MIX_STARTED_BY_X = ^1The mix was started by ^4%s^1.
+MIX_NOT_STARTED_YET = ^1The mix has not started yet!
+MIX_STOPPED_BY_YOU = ^1The mix was stopped by ^4You^1.
+MIX_STOPPED_BY_X = ^1The mix was stopped by ^4%s^1.
+MIX_NEED_STOPPED = ^1The mix needs to be ^4stopped^1.
+
+WARM_STARTED_BY_YOU = ^1The WarmUp was started by ^4You^1.
+WARM_STARTED_BY_X = ^1The WarmUp was started by ^4%s^1.
+
+KNIFE_STARTED = ^1The Knife Round has started.
+KNIFE_STARTED_BY_YOU = ^1The Knife Round was started by ^4You^1.
+KNIFE_STARTED_BY_X = ^1The Knife Round was started by ^4%s^1.
+KNIFE_ROUND_WON_BY_X_TEAM = ^1The Knife Round was won by team ^4%s^1.
+
+CT_TEAM = CT
+TERO_TEAM = TERRORIST
+SPEC_TEAM = SPECTATOR
+DRAW = Draw
+
+MENU_ASK_PLAYER = What do you choose?
+ASK_MENU_SWITCH = Switch?
+AKS_MENU_STAY = Stay?
+
+TEAM_VOTED = ^1The winning team chose to ^4
+SWITCH = switch teams^1.
+STAY = stay^1.
+
+CHAT_OPENED_BY_YOU = ^1The chat was opened by ^4You^1.
+CHAT_OPENED_BY_X = ^1The chat was opened by ^4%s^1.
+CHAT_CLOSED_BY_YOU = ^1The chat was closed by ^4You^1.
+CHAT_CLOSED_BY_X = ^1The chat was closed by ^4%s^1.
+
+YOU_SCORED_ACE_POINTS = ^1You scored an ^4Ace^1. You received ^4%i ^1points.
+YOU_SCORED_ACE = ^1You scored an ^4Ace^1.
+X_SCORED_ACE = ^4%s ^1scored an ^4Ace^1.
+YOU_SCORED_SEMIACE_POINTS = ^1You scored a ^4Semi-Ace^1. You received ^4%i ^1points.
+YOU_SCORED_SEMIACE = ^1You scored a ^4Semi-Ace^1.
+X_SCORED_SEMIACE = ^4%s ^1scored a ^4Semi-Ace^1.
+
+CANT_START_OVERTIME_YET = ^1Overtime is not available yet.
+OVERTIME_STARTED_BY_YOU = ^1Overtime was started by ^4You^1.
+OVERTIME_STARTED_BY_X = ^1Overtime was started by ^4%s^1.
+DEMO_STARTED_ON_YOU = ^1The demo was started ^4automatically^1.
+
+MIX_SCORE_IS = ^1The mix has just ^4Started^1. The score is ^4%L %i ^3- ^4%L %i^1.
+MIX_SCORE_IS_WITH_END = ^1The round has ended. The score is now ^4%L %i ^3- ^4%L %i^1.
+MIX_HALF_SCORE = ^1The first half has ^4ended^1. The score is now ^4%L %i ^3- ^4%L %i^1.
+MIX_LAST_ROUND_FOR_X_TEAM = ^1This is the last round for team ^4%s.
+MIX_WON_BY_X_TEAM = ^1The mix was won by team ^4%s^1. ^3Congratulations.
+MIX_END_SCORE = ^1The mix has ^4ended^1. The final score is: ^4%L %i ^3 - ^4%L %i^1.
+
+OVERTIME_AUTOMATIC_WILL_START = ^4Overtime^1 will start in ^47 seconds^1.
+OVERTIME_AUTOMATIC_WILL_START_ONER = ^4Decider round^1 will start in ^47 seconds^1.
+OVERTIME_ALREADY_STARTED = ^1Overtime is already ^4started.
+FIRST_OVERTIME_SCORE_IS = ^1In the first part of ^4Overtime^1, the score is: ^4%L %i ^3 - ^4%L %i^1.
+SECOND_OVERTIME_SCORE_IS = ^1In the second part of ^4Overtime^1, the score is: ^4%L %i ^3 - ^4%L %i^1.
+ONE_ROUND_FOR_WIN = ^1The decider round has started^4!
+MIX_WON_BY_X_TEAM_IN_OVERTIME = ^1The mix was won in ^4Overtime^1 by team ^4%s^1. ^3Congratulations.
+MIX_OVERTIME_END_SCORE = ^1The mix has ^4ended^1 in ^4Overtime^1. The final score is: ^4%L %i ^3 - ^4%L %i^1.
+
+MIX_YOUR_TEAM_WON = ^1Your team won the ^4Mix^1. You received ^4%d bonus points^1.
+
+PLAYERS_MOVED_SPEC_BY_YOU = ^1All players were moved to spectators by ^4You^1.
+PLAYERS_MOVED_SPEC_BY_X = ^1All players were moved to spectators by ^4%s^1.
+PLAYER_X_MOVED_X_BY_YOU = ^1Player ^4%s ^1was moved to team ^4%s^1 by ^4You^1.
+YOU_WERE_MOVED_X_BY_X = ^1You were moved to team ^4%s^1 by ^4%s^1.
+PLAYER_X_MOVED_X_BY_X = ^1Player ^4%s ^1was moved to team ^4%s^1 by ^4%s^1.
+
+PLAYER_X_REQUESTED_TIMEOUT = ^1Player ^4%s ^1has just requested a timeout.
+YOUR_TEAM_ALREADY_TIMEOUT = ^1Your team has already used a ^4timeout^1.
+MIX_TIMEOUTED = The mix is in timeout.
+
+PLAYER_NOT_FOUND = The selected player could not be found.
+
+DEMO_STARTED_BY_YOU_FOR_X = ^1The demo was started by ^4You^1 for player ^4%s^1.
+DEMO_STARTED_BY_X_FOR_X = ^1The demo was started by ^4%s^1 for player ^4%s^1.
+DEMO_STOPPED_BY_YOU_FOR_X = ^1The demo was stopped by ^4You^1 for player ^4%s^1.
+DEMO_STOPPED_BY_X_FOR_X = ^1The demo was stopped by ^4%s^1 for player ^4%s^1.
+DEMO_NAME_REQUIRED = ^1The demo name is required!
+
+KILLER_KILLED_ADD_HS = ^1You received ^4%d points ^1for killing ^4%s ^1with a ^3headshot^1.
+VICTIM_KILLED_SUB_HS = ^1You lost ^4%d points ^1for being killed by ^4%s ^1with a ^3headshot^1.
+KILLER_KILLED_ADD = ^1You received ^4%d points ^1for killing ^4%s^1.
+VICTIM_KILLED_SUB = ^1You lost ^4%d points ^1for being killed by ^4%s^1.
+KILLER_KILLED_SUICIDE = ^1You lost ^4%d points ^1for ^3suicide^1.
+KILLER_KILLED_ADD_KNIFE_HS = ^1You received ^4%d points ^1for killing ^4%s ^1with a ^3knife headshot^1.
+VICTIM_KILLED_SUB_KNIFE_HS = ^1You lost ^4%d points ^1for being killed by ^4%s ^1with a ^3knife headshot^1.
+KILLER_KILLED_ADD_GRENADE = ^1You received ^4%d points ^1for killing ^4%s^1 with a ^3HE grenade^1.
+KILLER_KILLED_SUB_GRENADE = ^1You lost ^4%d points ^1for being killed by ^4%s^1 with a ^3HE grenade^1.
+KILLER_KILLED_ADD_KNIFE = ^1You received ^4%d points ^1for killing ^4%s ^1with a ^3knife^1.
+VICTIM_KILLED_SUB_KNIFE = ^1You lost ^4%d points ^1for being killed by ^4%s ^1with a ^3knife^1.
+VICTIM_KILLED_SUB_TK = ^1You lost ^4%d points ^1for killing teammate ^3%s^1.
+VICTIM_KILLED_SUB_TK_HS = ^1You lost ^4%d points ^1for killing teammate ^3%s^1 with a ^3headshot^1.
+VICTIM_KILLED_SUB_TK_KNIFE = ^1You lost ^4%d points ^1for killing teammate ^3%s^1 with a ^3knife^1.
+VICTIM_KILLED_SUB_TK_KNIFE_HS = ^1You lost ^4%d points ^1for killing teammate ^3%s^1 with a ^3knife headshot^1.
+POINTS_FOR_PLANT_BOMB = ^1You received ^4%d points ^1for planting the ^3bomb^1.
+BOMB_EXPLODED_BY_YOU = ^1You received ^4%d points ^1for detonating the ^3bomb^1.
+BOMB_DEFUSED_BY_YOU = ^1You received ^4%d points ^1for defusing the ^3bomb^1.
+BLOCK_KILL = ^1You cannot use the ^4kill^1 command.
+
+PASSWORD_SETTED_BY_YOU = The password was set by ^4you^1 to: ^4%s.
+PASSWORD_SETTED_BY_X_ADMIN = The password was set by ^4%s ^1to: ^4%s.
+PASSWORD_SETTED_BY_X = The password was set by ^4%s.
+PASSWORD_REMOVED_BY_YOU = The password was removed by ^4you^1.
+PASSWORD_REMOVED_BY_X = The password was removed by ^4%s.
+
+MIX_START_COMMANDS_ARE = Commands to start the Mix: 
+MIX_STOP_COMMANDS_ARE = Commands to stop the Mix: 
+MIX_WARM_COMMANDS_ARE = Commands to start the WarmUp: 
+MIX_KNIFE_COMMANDS_ARE = Commands for the Knife Round: 
+MIX_CHAT_ON_COMMANDS_ARE = Commands to start the Chat: 
+MIX_CHAT_OFF_COMMANDS_ARE = Commands to stop the Chat: 
+MIX_OVERTIME_COMMANDS_ARE = Commands to start Overtime: 
+MIX_PASSON_COMMANDS_ARE = Commands to set a Password: 
+MIX_PASSOFF_COMMANDS_ARE = Commands to remove a Password: 
+MIX_SPEC_ALL_COMMANDS_ARE = Commands to move players to Spectators: 
+MIX_CT_MOVE_COMMANDS_ARE = Commands to move a player to CT: 
+MIX_T_MOVE_COMMANDS_ARE = Commands to move a player to T: 
+MIX_SPEC_MOVE_COMMANDS_ARE = Commands to move a player to SPEC: 
+MIX_START_DEMO_COMMANDS_ARE = Commands to start the Demo: 
+MIX_STOP_DEMO_COMMANDS_ARE = Commands to stop the Demo: 
+OPEN_CONSOLE_FOR_CMDS = ^1Open your console to view the ^4available commands^1.
+
+DATABASE_WIPED = Player's points were reseted successfully! This command if efective when there is no player connected on any server!^n
+
+MIX_PLAYER_DROPPED = Player ^4%s^1 has disconnected. Waiting ^4%d^1 minutes for reconnection!
+MIX_PLAYER_DROPPED_PUNISH = Player ^4%s^1 did not reconnect. They have been banned for ^4%d^1 hours and lost ^4%d^1 points.
+MIX_PLAYER_DROPPED_REASON = You left the mix!
+
+[ro]
+YOU_DONT_HAVE_ACCESS = ^1Nu ai acces la aceasta comanda!
+
+MIX_NEEDS_TEN_PLAYERS = ^1Mix-ul are nevoie de^4 10 jucatori^1 pentru a putea fi pornit.
+
+MIX_ALREADY_STARTED = ^1Mix-ul este deja pornit!
+MIX_STARTED_BY_YOU = ^1Mix-ul a fost pornit de catre ^4Tine^1.
+MIX_STARTED_BY_X = ^1Mix-ul a fost pornit de catre ^4%s^1.
+MIX_NOT_STARTED_YET = ^1Mix-ul nu este pornit!
+MIX_STOPPED_BY_YOU = ^1Mix-ul a fost oprit de catre ^4Tine^1.
+MIX_STOPPED_BY_X = ^1Mix-ul a fost oprit de catre ^4%s^1.
+MIX_NEED_STOPPED = ^1Mix-ul trebuie sa fie ^4oprit^1.
+
+WARM_STARTED_BY_YOU = ^1WarmUp-ul a fost pornit de catre ^4Tine^1.
+WARM_STARTED_BY_X = ^1WarmUp-ul a fost pornit de catre ^4%s^1.
+
+KNIFE_STARTED = ^1Runda de cutite a pornit.
+KNIFE_STARTED_BY_YOU = ^1Runda de Cutite a fost pornita de catre ^4Tine^1.
+KNIFE_STARTED_BY_X = ^1Runda de Cutite a fost pornita de catre ^4%s^1.
+KNIFE_ROUND_WON_BY_X_TEAM = ^1Runda de Cutite a fost castigata de echipa ^4%s^1.
+
+CT_TEAM = CT
+TERO_TEAM = TERRORIST
+SPEC_TEAM = SPECTATOR
+DRAW = Egalitate
+
+MENU_ASK_PLAYER = Ce alegi?
+ASK_MENU_SWITCH = Schimbam?
+AKS_MENU_STAY = Stam?
+
+TEAM_VOTED = ^1Echipa castigatoare a ales ^4
+SWITCH = sa schimbe echipele^1.
+STAY = sa stea^1.
+
+CHAT_OPENED_BY_YOU = ^1Chat-ul a fost deschiis de catre ^4You^1.
+CHAT_OPENED_BY_X = ^1Chat-ul a fost deschiis de catre ^4%s^1.
+CHAT_CLOSED_BY_YOU = ^1Chat-ul a fost inchis de catre ^4Tine^1.
+CHAT_CLOSED_BY_X = ^1Chat-ul a fost inchis de catre ^4%s^1.
+
+YOU_SCORED_ACE_POINTS = ^1Ai facut un ^4Ace^1. Ai primit ^4%i ^1puncte.
+YOU_SCORED_ACE = ^1Ai facut un ^4Ace^1.
+X_SCORED_ACE = ^4%s ^1a facut un ^4Ace^1.
+YOU_SCORED_SEMIACE_POINTS = ^1Ai facut un ^4Semi-Ace^1. Ai primit ^4%i ^1puncte.
+YOU_SCORED_SEMIACE = ^1Ai facut un ^4Semi-Ace^1.
+X_SCORED_SEMIACE = ^4%s ^1a facut un ^4Semi-Ace^1.
+
+CANT_START_OVERTIME_YET = ^1Prelungirile nu sunt disponibil.
+OVERTIME_STARTED_BY_YOU = ^1Prelungirile au fost pornit de catre ^4Tine^1.
+OVERTIME_STARTED_BY_X = ^1OPrelungirile au fost pornit de catre ^4%s^1.
+DEMO_STARTED_ON_YOU = ^1Demo-ul a fost pornit ^4automat^1.
+
+MIX_SCORE_IS = ^1Mix-ul tocmai a ^4Inceput^1. Scorul este ^4%L %i ^3- ^4%L %i^1.
+MIX_SCORE_IS_WITH_END = ^1Runda a luat sfarsit. Scorul este acum ^4%L %i ^3- ^4%L %i^1.
+MIX_HALF_SCORE = ^1Prima jumatate a luat  ^4sfarsit^1. Scorul este acum ^4%L %i ^3- ^4%L %i^1.
+MIX_LAST_ROUND_FOR_X_TEAM = ^1Aceasta este ultima runda pentru echipa ^4%s.
+MIX_WON_BY_X_TEAM = ^1Mix-ul a fost castigat de catre echipa ^4%s^1. ^3Felicitari.
+MIX_END_SCORE = ^1Mix-ul a luat ^4sfarsit^1. Scorul final este: ^4%L %i ^3 - ^4%L %i^1.
+
+OVERTIME_AUTOMATIC_WILL_START = ^4Prelungirile^1 vor porni in ^47 secunde^1.
+OVERTIME_ALREADY_STARTED = ^1Overtime-ul este deja ^4pornit.
+FIRST_OVERTIME_SCORE_IS = ^1In prima parte a ^4Prelungirilor^1, scorul este: ^4%L %i ^3 - ^4%L %i^1.
+SECOND_OVERTIME_SCORE_IS = ^1In a doua parte a ^4Prelungirilor^1, scorul este: ^4%L %i ^3 - ^4%L %i^1.
+MIX_WON_BY_X_TEAM_IN_OVERTIME = ^1Mix-ul a fost castigat in ^4Prelungiri^1 de echipa ^4%s^1. ^3Felicitari.
+MIX_OVERTIME_END_SCORE = ^1Mix-ul a luat ^4sfarsit^1 in ^4Prelungiri^1. Scorul final este: ^4%L %i ^3 - ^4%L %i^1.
+
+MIX_YOUR_TEAM_WON = ^1Echipa ta a castigat ^4Mix-ul^1. Ati primit cate ^4%d puncte ^1bonus.
+
+PLAYERS_MOVED_SPEC_BY_YOU = ^1Toti jucatorii au fost mutati la spectator de catre ^4Tine^1.
+PLAYERS_MOVED_SPEC_BY_X = ^1Toti jucatorii au fost mutati la spectator de catre ^4%s^1.
+PLAYER_X_MOVED_X_BY_YOU = ^1Jucatorul ^4%s ^1a fost mutat la echipa ^4%s^1 de catre ^4Tine^1.
+YOU_WERE_MOVED_X_BY_X = ^1Ai fost mutat la echipa ^4%s^1 de catre ^4%s^1.
+PLAYER_X_MOVED_X_BY_X = ^1Jucatorul ^4%s ^1a fost mutat la echipa ^4%s^1 de catre ^4%s^1.
+
+PLAYER_X_REQUESTED_TIMEOUT = ^1Jucatorul ^4%s ^1 tocmai a cerut o pauza.
+YOUR_TEAM_ALREADY_TIMEOUT = ^1Echipa ta deja a folosit ^4pauza^1.
+MIX_TIMEOUTED = Mix-ul este in pauza.
+
+PLAYER_NOT_FOUND = Jucatorul ales nu poate fi gasit.
+
+DEMO_STARTED_BY_YOU_FOR_X = ^1Demo-ul a fost inceput de catre ^4Tine^1 pentru jucatorul ^4%s^1.
+DEMO_STARTED_BY_X_FOR_X = ^1Demo-ul a fost inceput de catre ^4%s^1 pentru jucatorul ^4%s^1.
+DEMO_STOPPED_BY_YOU_FOR_X = ^1Demo-ul a fost oprit de catre ^4Tine^1 pentru jucatorul ^4%s^1.
+DEMO_STOPPED_BY_X_FOR_X = ^1Demo-ul a fost inceput de catre ^4%s^1 pentru jucatorul ^4%s^1.
+DEMO_NAME_REQUIRED = ^1Numele demo-ului este necesar!
+
+KILLER_KILLED_ADD_HS = ^1Ai primit ^4%d puncte ^1pentru uciderea lui ^4%s ^1prin ^3headshot^1.
+VICTIM_KILLED_SUB_HS = ^1Ai pierdut ^4%d puncte ^1fiind ucis de catre ^4%s ^1prin ^3headshot^1.
+KILLER_KILLED_ADD = ^1Ai primit ^4%d puncte ^1pentru uciderea lui ^4%s^1.
+VICTIM_KILLED_SUB = ^1Ai pierdut ^4%d puncte ^1fiind ucis de catre ^4%s^1.
+KILLER_KILLED_SUICIDE = ^1Ai pierdut ^4%d puncte ^1pentru ^3suicid^1.
+KILLER_KILLED_ADD_KNIFE_HS = ^1Ai primit ^4%d puncte ^1pentru uciderea lui ^4%s ^1cu ^3cutitul^1.
+VICTIM_KILLED_SUB_KNIFE_HS = ^1Ai pierdut ^4%d puncte ^1fiind ucis de catre ^4%s ^1cu ^3cutitul^1.
+KILLER_KILLED_ADD_GRENADE = ^1Ai primit ^4%d puncte ^1pentru uciderea lui ^4%s^1 cu ^3grenada HE^1.
+KILLER_KILLED_SUB_GRENADE = ^1Ai pierdut ^4%d puncte ^1fiind ucis de catre ^4%s^1 cu ^3grenada HE^1.
+KILLER_KILLED_ADD_KNIFE = ^1Ai primit ^4%d puncte ^1pentru uciderea lui ^4%s ^1cu ^3cutitul^1.
+VICTIM_KILLED_SUB_KNIFE = ^1Ai pierdut ^4%d puncte ^1fiind ucis de catre ^4%s ^1cu ^3cutitul^1.
+VICTIM_KILLED_SUB_TK = ^1Ai pierdut ^4%d puncte ^1pentru uciderea ^3coechipierului ^4%s^1.
+VICTIM_KILLED_SUB_TK_HS = ^1Ai pierdut ^4%d puncte ^1pentru uciderea ^3coechipierului ^4%s^1 prin ^3headshot^1.
+VICTIM_KILLED_SUB_TK_KNIFE = ^1Ai pierdut ^4%d puncte ^1pentru uciderea ^3coechipierului ^4%s^1 cu ^3cutitul^1.
+VICTIM_KILLED_SUB_TK_KNIFE_HS = ^1Ai pierdut ^4%d puncte ^1pentru uciderea ^3coechipierului ^4%s^1 prin ^3headshot^1 cu ^3cutitul^1.
+VICTIM_NOSCOPED = ^1L-ai ucis pe ^4%s^1 prin ^4NO-Scope^1.
+KILLER_NOSCOPED= ^1Ai fost ucis prin ^4NO-Scope^1 de catre ^4%s^1.
+POINTS_FOR_PLANT_BOMB = ^1Ai primit ^4%d puncte ^1pentru plantarea ^3bombei^1.
+BOMB_EXPLODED_BY_YOU = ^1Ai primit ^4%d puncte ^1pentru explodarea ^3bombei^1.
+BOMB_DEFUSED_BY_YOU = ^1Ai primit ^4%d puncte ^1pentru dezamorsarea ^3bombei^1.
+BLOCK_KILL = ^1Nu poti folosi comanda ^4kill^1.
+
+PASSWORD_SETTED_BY_YOU = Parola a fost setata de catre ^4tine^1 in: ^4%s.
+PASSWORD_SETTED_BY_X_ADMIN = Parola a fost setata de catre ^4%s ^1in: ^4%s.
+PASSWORD_SETTED_BY_X = Parola a fost setata de catre ^4%s.
+PASSWORD_REMOVED_BY_YOU = Parola a fost scoasa de catre ^4tine^1.
+PASSWORD_REMOVED_BY_X = Parola a fost scoasa de catre ^4%s
+
+MIX_START_COMMANDS_ARE = Comenzile pentru pornirea Mix-ului: 
+MIX_STOP_COMMANDS_ARE = Comenzile pentru oprirea Mix-ului: 
+MIX_WARM_COMMANDS_ARE = Comenzile pentru pornirea WarmUp-ului: 
+MIX_KNIFE_COMMANDS_ARE = Comenzile pentru runda de Cutite: 
+MIX_CHAT_ON_COMMANDS_ARE = Comenzile pentru pornirea Chat-ului: 
+MIX_CHAT_OFF_COMMANDS_ARE = Comenzile pentru oprirea Chat-ului: 
+MIX_OVERTIME_COMMANDS_ARE = Comenzile pentru pornirea Prelungirilor: 
+MIX_PASSON_COMMANDS_ARE = Comenzile pentru adaugarea unei Parole: 
+MIX_PASSOFF_COMMANDS_ARE = Comenzile pentru inlaturarea Parolei: 
+MIX_SPEC_ALL_COMMANDS_ARE = Comenzile pentru mutarea jucatorilor Spectator: 
+MIX_CT_MOVE_COMMANDS_ARE = Comenzile pentru mutarea unui jucator CT: 
+MIX_T_MOVE_COMMANDS_ARE = Comenzile pentru mutarea unui jucator T: 
+MIX_SPEC_MOVE_COMMANDS_ARE = Comenzile pentru mutarea unui jucator SPEC: 
+MIX_START_DEMO_COMMANDS_ARE = Comenzile pentru pornirea Demo-ului: 
+MIX_STOP_DEMO_COMMANDS_ARE = Comenzile pentru oprirea Demo-ului: 
+OPEN_CONSOLE_FOR_CMDS = ^1Deschide-ti consola pentru a vedea ^4comenzile^1 disponibile.
+
+DATABASE_WIPED = Punctele jucatorilor au fost resetate cu succes! Aceasta comanda are efect doar cand nu este niciun jucator conectat pe servere!^n
+
+MIX_PLAYER_DROPPED = Jucatorul ^4%s^1 s-a deconectat. Se asteapta ^4%d^1 minute pentru reconectare!
+MIX_PLAYER_DROPPED_PUNISH = Jucatorul ^4%s^1 nu s-a mai reconectat. A fost banat ^4%d^1 ore si a pierdut ^4%d^1 puncte.
+MIX_PLAYER_DROPPED_REASON = Ai parasit mix-ul!
