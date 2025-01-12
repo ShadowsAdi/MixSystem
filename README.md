@@ -2,7 +2,7 @@
 
 ---
 
-> [!CAUTION]
+> [!IMPORTANT]
 > Requirements:
 > 
 > - AmxModX 1.9.0-5271+
