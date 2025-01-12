@@ -4,7 +4,7 @@
 #include <mix_system>
 
 #define PLUGIN  "[MIX System] Player Drop"
-#define VERSION "1.0"
+#define VERSION "1.1.0"
 #define AUTHOR  "Shadows Adi"
 
 #define TASK_CHECK_TIME 19210
@@ -35,6 +35,8 @@ public plugin_init()
 		bind_pcvar_num(create_cvar("mix_player_drop_points", "25", .description = "Points to substract from player balance"), g_iSubstractPoints)
 	}
 	
+	AutoExecConfig()
+
 	RegisterHookChain(RG_CSGameRules_RestartRound, "RG_RestartRound", 1)
 }
 

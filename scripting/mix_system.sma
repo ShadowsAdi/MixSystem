@@ -31,7 +31,7 @@
 #define PLUGIN  "Mix System ~ Fastcup Mode"
 #endif
 
-#define VERSION "2.16"
+#define VERSION "2.17.0"
 #define AUTHOR  "Shadows Adi"
 
 #define IsPlayer(%1)				((1 <= %1 <= MAX_PLAYERS) && is_user_connected(%1))

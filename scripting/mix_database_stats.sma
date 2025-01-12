@@ -9,7 +9,7 @@
 #include <reapi>
 
 #define PLUGIN  "[MIX System] Player's Data + Match Data"
-#define VERSION "1.8.1"
+#define VERSION "1.8.2"
 #define AUTHOR  "Shadows Adi"
 
 new Handle:g_hSqlTuple
