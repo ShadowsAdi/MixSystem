@@ -271,3 +271,140 @@ MIX_PLAYER_DROPPED = Jucatorul ^4%s^1 s-a deconectat. Se asteapta ^4%d^1 minute 
 MIX_PLAYER_DROPPED_PUNISH_P = Jucatorul ^4%s^1 nu s-a mai reconectat. A fost banat ^4%d^1 ore si a pierdut ^4%d^1 puncte.
 MIX_PLAYER_DROPPED_PUNISH = Jucatorul ^4%s^1 nu s-a mai reconectat. A fost banat ^4%d^1 ore.
 MIX_PLAYER_DROPPED_REASON = Ai parasit mix-ul!
+
+[ru]
+YOU_DONT_HAVE_ACCESS = ^1Вы не имеете доступа к этой команде!
+
+MIX_NEEDS_TEN_PLAYERS = ^1Для начала микса требуется ^4 10 игроков^1.
+
+MIX_ALREADY_STARTED = ^1Микс уже начался!
+MIX_STARTED_BY_YOU = ^1Микс был начат ^4вами^1.
+MIX_STARTED_BY_X = ^1Микс был начат игроком ^4%s^1.
+MIX_NOT_STARTED_YET = ^1Микс ещё не начался!
+MIX_STOPPED_BY_YOU = ^1Микс был остановлен ^4вами^1.
+MIX_STOPPED_BY_X = ^1Микс был остановлен игроком ^4%s^1.
+MIX_NEED_STOPPED = ^1Микс нужно ^4остановить^1.
+
+WARM_STARTED_BY_YOU = ^1Разминка была начата ^4вами^1.
+WARM_STARTED_BY_X = ^1Разминка была начата игроком ^4%s^1.
+
+KNIFE_STARTED = ^1Ножевой раунд начался.
+KNIFE_STARTED_BY_YOU = ^1Ножевой раунд был начат ^4вами^1.
+KNIFE_STARTED_BY_X = ^1Ножевой раунд был начат игроком ^4%s^1.
+KNIFE_ROUND_WON_BY_X_TEAM = ^1Ножевой раунд выиграла команда ^4%s^1.
+
+CT_TEAM = КТ
+TERO_TEAM = ТЕРРОРИСТЫ
+SPEC_TEAM = ЗРИТЕЛИ
+DRAW = Ничья
+
+MENU_ASK_PLAYER = Что вы выбираете?
+ASK_MENU_SWITCH = Перейти?
+AKS_MENU_STAY = Остаться?
+
+TEAM_VOTED = ^1Победившая команда выбрала ^4
+SWITCH = смену сторон^1.
+STAY = остаться^1.
+
+CHAT_OPENED_BY_YOU = ^1Чат был открыт ^4вами^1.
+CHAT_OPENED_BY_X = ^1Чат был открыт игроком ^4%s^1.
+CHAT_CLOSED_BY_YOU = ^1Чат был закрыт ^4вами^1.
+CHAT_CLOSED_BY_X = ^1Чат был закрыт игроком ^4%s^1.
+
+YOU_SCORED_ACE_POINTS = ^1Вы сделали ^4Эйс^1. Вы получили ^4%i ^1очков.
+YOU_SCORED_ACE = ^1Вы сделали ^4Эйс^1.
+X_SCORED_ACE = ^4%s ^1сделал ^4Эйс^1.
+YOU_SCORED_SEMIACE_POINTS = ^1Вы сделали ^4Семи-Эйс^1. Вы получили ^4%i ^1очков.
+YOU_SCORED_SEMIACE = ^1Вы сделали ^4Семи-Эйс^1.
+X_SCORED_SEMIACE = ^4%s ^1сделал ^4Семи-Эйс^1.
+
+CANT_START_OVERTIME_YET = ^1Овертайм пока недоступен.
+OVERTIME_STARTED_BY_YOU = ^1Овертайм был начат ^4вами^1.
+OVERTIME_STARTED_BY_X = ^1Овертайм был начат игроком ^4%s^1.
+DEMO_STARTED_ON_YOU = ^1Демо было начато ^4автоматически^1.
+
+MIX_SCORE_IS = ^1Микс только что ^4начался^1. Счёт: ^4%L %i ^3- ^4%L %i^1.
+MIX_SCORE_IS_WITH_END = ^1Раунд закончился. Счёт теперь ^4%L %i ^3- ^4%L %i^1.
+MIX_HALF_SCORE = ^1Первая половина ^4закончилась^1. Счёт: ^4%L %i ^3- ^4%L %i^1.
+MIX_LAST_ROUND_FOR_X_TEAM = ^1Это последний раунд для команды ^4%s.
+MIX_WON_BY_X_TEAM = ^1Микс выиграла команда ^4%s^1. ^3Поздравляем.
+MIX_END_SCORE = ^1Микс ^4завершён^1. Финальный счёт: ^4%L %i ^3 - ^4%L %i^1.
+
+OVERTIME_AUTOMATIC_WILL_START = ^4Овертайм^1 начнётся через ^47 секунд^1.
+OVERTIME_AUTOMATIC_WILL_START_ONER = ^4Решающий раунд^1 начнётся через ^47 секунд^1.
+OVERTIME_ALREADY_STARTED = ^1Овертайм уже ^4начат.
+FIRST_OVERTIME_SCORE_IS = ^1В первой части ^4Овертайма^1 счёт: ^4%L %i ^3 - ^4%L %i^1.
+SECOND_OVERTIME_SCORE_IS = ^1Во второй части ^4Овертайма^1 счёт: ^4%L %i ^3 - ^4%L %i^1.
+ONE_ROUND_FOR_WIN = ^1Решающий раунд начался^4!
+MIX_WON_BY_X_TEAM_IN_OVERTIME = ^1Микс был выигран в ^4Овертайме^1 командой ^4%s^1. ^3Поздравляем.
+MIX_OVERTIME_END_SCORE = ^1Микс ^4завершён^1 в ^4Овертайме^1. Финальный счёт: ^4%L %i ^3 - ^4%L %i^1.
+
+MIX_YOUR_TEAM_WON = ^1Ваша команда выиграла ^4Микс^1. Вы получили ^4%d бонусных очков^1.
+
+PLAYERS_MOVED_SPEC_BY_YOU = ^1Все игроки были перемещены в зрители ^4вами^1.
+PLAYERS_MOVED_SPEC_BY_X = ^1Все игроки были перемещены в зрители игроком ^4%s^1.
+PLAYER_X_MOVED_X_BY_YOU = ^1Игрок ^4%s ^1был перемещён в команду ^4%s ^1вами^1.
+YOU_WERE_MOVED_X_BY_X = ^1Вы были перемещены в команду ^4%s ^1игроком ^4%s^1.
+PLAYER_X_MOVED_X_BY_X = ^1Игрок ^4%s ^1был перемещён в команду ^4%s ^1игроком ^4%s^1.
+
+PLAYER_X_REQUESTED_TIMEOUT = ^1Игрок ^4%s ^1только что запросил тайм-аут.
+YOUR_TEAM_ALREADY_TIMEOUT = ^1Ваша команда уже использовала ^4тайм-аут^1.
+MIX_TIMEOUTED = Микс находится в тайм-ауте.
+
+PLAYER_NOT_FOUND = Выбранный игрок не найден.
+
+DEMO_STARTED_BY_YOU_FOR_X = ^1Демо было начато ^4вами^1 для игрока ^4%s^1.
+DEMO_STARTED_BY_X_FOR_X = ^1Демо было начато игроком ^4%s^1 для игрока ^4%s^1.
+DEMO_STOPPED_BY_YOU_FOR_X = ^1Демо было остановлено ^4вами^1 для игрока ^4%s^1.
+DEMO_STOPPED_BY_X_FOR_X = ^1Демо было остановлено игроком ^4%s^1 для игрока ^4%s^1.
+DEMO_NAME_REQUIRED = ^1Имя демо обязательно!
+
+KILLER_KILLED_ADD_HS = ^1Вы получили ^4%d очков ^1за убийство ^4%s ^1с ^3хедшотом^1.
+VICTIM_KILLED_SUB_HS = ^1Вы потеряли ^4%d очков ^1за то, что были убиты игроком ^4%s ^1с ^3хедшотом^1.
+KILLER_KILLED_ADD = ^1Вы получили ^4%d очков ^1за убийство ^4%s^1.
+VICTIM_KILLED_SUB = ^1Вы потеряли ^4%d очков ^1за то, что были убиты игроком ^4%s^1.
+KILLER_KILLED_SUICIDE = ^1Вы потеряли ^4%d очков ^1за ^3суицид^1.
+KILLER_KILLED_ADD_KNIFE_HS = ^1Вы получили ^4%d очков ^1за убийство ^4%s ^1с помощью ^3ножа в голову^1.
+VICTIM_KILLED_SUB_KNIFE_HS = ^1Вы потеряли ^4%d очков ^1за то, что были убиты игроком ^4%s ^1с помощью ^3ножа в голову^1.
+KILLER_KILLED_ADD_GRENADE = ^1Вы получили ^4%d очков ^1за убийство ^4%s ^1с помощью ^3гранаты HE^1.
+KILLER_KILLED_SUB_GRENADE = ^1Вы потеряли ^4%d очков ^1за то, что были убиты игроком ^4%s ^1с помощью ^3гранаты HE^1.
+KILLER_KILLED_ADD_KNIFE = ^1Вы получили ^4%d очков ^1за убийство ^4%s ^1с помощью ^3ножа^1.
+VICTIM_KILLED_SUB_KNIFE = ^1Вы потеряли ^4%d очков ^1за то, что были убиты игроком ^4%s ^1с помощью ^3ножа^1.
+VICTIM_KILLED_SUB_TK = ^1Вы потеряли ^4%d очков ^1за убийство товарища по команде ^3%s^1.
+VICTIM_KILLED_SUB_TK_HS = ^1Вы потеряли ^4%d очков ^1за убийство товарища по команде ^3%s ^1с ^3хедшотом^1.
+VICTIM_KILLED_SUB_TK_KNIFE = ^1Вы потеряли ^4%d очков ^1за убийство товарища по команде ^3%s ^1с помощью ^3ножа^1.
+VICTIM_KILLED_SUB_TK_KNIFE_HS = ^1Вы потеряли ^4%d очков ^1за убийство товарища по команде ^3%s ^1с помощью ^3ножа в голову^1.
+POINTS_FOR_PLANT_BOMB = ^1Вы получили ^4%d очков ^1за установку ^3бомбы^1.
+BOMB_EXPLODED_BY_YOU = ^1Вы получили ^4%d очков ^1за подрыв ^3бомбы^1.
+BOMB_DEFUSED_BY_YOU = ^1Вы получили ^4%d очков ^1за разминирование ^3бомбы^1.
+BLOCK_KILL = ^1Вы не можете использовать команду ^4kill^1.
+
+PASSWORD_SETTED_BY_YOU = Пароль был установлен ^4вами^1: ^4%s.
+PASSWORD_SETTED_BY_X_ADMIN = Пароль был установлен администратором ^4%s^1: ^4%s.
+PASSWORD_SETTED_BY_X = Пароль был установлен ^4%s^1.
+PASSWORD_REMOVED_BY_YOU = Пароль был удалён ^4вами^1.
+PASSWORD_REMOVED_BY_X = Пароль был удалён ^4%s^1.
+
+MIX_START_COMMANDS_ARE = Команды для начала Микса: 
+MIX_STOP_COMMANDS_ARE = Команды для остановки Микса: 
+MIX_WARM_COMMANDS_ARE = Команды для начала Разминки: 
+MIX_KNIFE_COMMANDS_ARE = Команды для Ножевого Раунда: 
+MIX_CHAT_ON_COMMANDS_ARE = Команды для включения Чата: 
+MIX_CHAT_OFF_COMMANDS_ARE = Команды для отключения Чата: 
+MIX_OVERTIME_COMMANDS_ARE = Команды для начала Овертайма: 
+MIX_PASSON_COMMANDS_ARE = Команды для установки Пароля: 
+MIX_PASSOFF_COMMANDS_ARE = Команды для удаления Пароля: 
+MIX_SPEC_ALL_COMMANDS_ARE = Команды для перемещения игроков в Зрители: 
+MIX_CT_MOVE_COMMANDS_ARE = Команды для перемещения игрока в КТ: 
+MIX_T_MOVE_COMMANDS_ARE = Команды для перемещения игрока в Т: 
+MIX_SPEC_MOVE_COMMANDS_ARE = Команды для перемещения игрока в Зрители: 
+MIX_START_DEMO_COMMANDS_ARE = Команды для начала Демо: 
+MIX_STOP_DEMO_COMMANDS_ARE = Команды для остановки Демо: 
+OPEN_CONSOLE_FOR_CMDS = ^1Откройте консоль, чтобы увидеть ^4доступные команды^1.
+
+DATABASE_WIPED = Очки игроков были успешно сброшены! Эта команда эффективна, если на сервере нет подключённых игроков!^n
+
+MIX_PLAYER_DROPPED = Игрок ^4%s^1 отключился. Ожидание ^4%d^1 минут для повторного подключения!
+MIX_PLAYER_DROPPED_PUNISH_P = Игрок ^4%s^1 не переподключился. Он был забанен на ^4%d^1 часов и потерял ^4%d^1 очков.
+MIX_PLAYER_DROPPED_PUNISH = Игрок ^4%s^1 не переподключился. Он был забанен на ^4%d^1 часов.
+MIX_PLAYER_DROPPED_REASON = Вы покинули микс!
