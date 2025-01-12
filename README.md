@@ -2,7 +2,23 @@
 
 ---
 
-This system includes the following functionalities:
+> [!IMPORTANT]
+> Requirements:
+> - AmxModX 1.9.0-5271+
+> - ReHLDS  v3.13.0.788+
+> - ReGameDLL v5.26.0.668+
+> - ReAPI v5.24.0.300+
+
+## Install
+Download latest release from [here](https://github.com/ShadowsAdi/MixSystem/archive/main.zip).
+Extract the archive and drag and drop files in your 'cstrike/addons/amxmodx' folder and compile the source code (.sma).
+
+## Docs
+System has in total, 9 forwards and 11 natives.
+
+More about documentation can be found in [mix_system.inc](https://github.com/ShadowsAdi/MixSystem/blob/main/scripting/include/mix_system.inc) file .../amxmodx/scripting/include.
+
+## This system includes the following functionalities:
 
 - 100% customizable settings from an external file (from chat/console command names to player weapons during the warm-up round).
 - Commands for:
