@@ -131,7 +131,8 @@ OPEN_CONSOLE_FOR_CMDS = ^1Open your console to view the ^4available commands^1.
 DATABASE_WIPED = Player's points were reseted successfully! This command if efective when there is no player connected on any server!^n
 
 MIX_PLAYER_DROPPED = Player ^4%s^1 has disconnected. Waiting ^4%d^1 minutes for reconnection!
-MIX_PLAYER_DROPPED_PUNISH = Player ^4%s^1 did not reconnect. They have been banned for ^4%d^1 hours and lost ^4%d^1 points.
+MIX_PLAYER_DROPPED_PUNISH_P = Player ^4%s^1 did not reconnect. They have been banned for ^4%d^1 hours and lost ^4%d^1 points.
+MIX_PLAYER_DROPPED_PUNISH = Player ^4%s^1 did not reconnect. They have been banned for ^4%d^1 hours.
 MIX_PLAYER_DROPPED_REASON = You left the mix!
 
 [ro]
@@ -267,5 +268,6 @@ OPEN_CONSOLE_FOR_CMDS = ^1Deschide-ti consola pentru a vedea ^4comenzile^1 dispo
 DATABASE_WIPED = Punctele jucatorilor au fost resetate cu succes! Aceasta comanda are efect doar cand nu este niciun jucator conectat pe servere!^n
 
 MIX_PLAYER_DROPPED = Jucatorul ^4%s^1 s-a deconectat. Se asteapta ^4%d^1 minute pentru reconectare!
-MIX_PLAYER_DROPPED_PUNISH = Jucatorul ^4%s^1 nu s-a mai reconectat. A fost banat ^4%d^1 ore si a pierdut ^4%d^1 puncte.
+MIX_PLAYER_DROPPED_PUNISH_P = Jucatorul ^4%s^1 nu s-a mai reconectat. A fost banat ^4%d^1 ore si a pierdut ^4%d^1 puncte.
+MIX_PLAYER_DROPPED_PUNISH = Jucatorul ^4%s^1 nu s-a mai reconectat. A fost banat ^4%d^1 ore.
 MIX_PLAYER_DROPPED_REASON = Ai parasit mix-ul!

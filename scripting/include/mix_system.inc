@@ -118,6 +118,16 @@ native Mix_SearchForUser(szSteamID[], iPoints, bool:bAdd = true)
 native Mix_MultiplyFactor(id, iFactor)
 
 /**
+ * Returns if points system is active.
+ *
+ * @noparam
+ * @type            Boolean
+ * 
+ * @return          True if it is, false otherwise.
+ */
+native Mix_HasPointsSys()
+
+/**
  * Called when a player is killed during a game.
  *
  * @param id                    Killer index.

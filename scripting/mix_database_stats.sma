@@ -57,6 +57,14 @@ public plugin_init()
 	get_mapname(g_szMap, charsmax(g_szMap))
 
 	g_aPlayerDropped = ArrayCreate(32)
+
+	if(!Mix_HasPointsSys())
+	{
+		new szPluginName[32]
+		get_plugin(-1, szPluginName, charsmax(szPluginName))
+		log_amx("[MIX System] Plugin ^"%s^" has been stopped because main plugin has no Points System active.", szPluginName)
+		pause("a")
+	}
 }
 
 public plugin_cfg()

@@ -528,6 +528,7 @@ public plugin_natives()
 	register_native("Mix_SearchForUser", "native_search_for_user")
 	register_native("Mix_UserPoints", "native_user_points")
 	#endif
+	register_native("Mix_HasPointsSys", "native_has_points_sys")
 }
 
 public plugin_end()
@@ -4178,3 +4179,12 @@ public native_user_points(iPluginID, iParamNum)
 	return g_iPoints[id]
 }
 #endif
+
+public native_has_points_sys(iPluginID, iParamNum)
+{
+	#if defined POINTS_SYS
+	return true
+	#else
+	return false
+	#endif
+}

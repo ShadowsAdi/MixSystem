@@ -29,8 +29,12 @@ public plugin_init()
 
 	bind_pcvar_num(create_cvar("mix_player_drop_time", "300", .description = "Time in seconds for player to reconnect"), g_iTime)
 	bind_pcvar_num(create_cvar("mix_player_drop_ban", "120", .description = "Ban time for dropped player in seconds"), g_iBanTime)
-	bind_pcvar_num(create_cvar("mix_player_drop_points", "25", .description = "Points to substract from player balance"), g_iSubstractPoints)
-
+	
+	if(Mix_HasPointsSys())
+	{
+		bind_pcvar_num(create_cvar("mix_player_drop_points", "25", .description = "Points to substract from player balance"), g_iSubstractPoints)
+	}
+	
 	RegisterHookChain(RG_CSGameRules_RestartRound, "RG_RestartRound", 1)
 }
 
@@ -80,7 +84,7 @@ public client_disconnected(id, bool:drop, message[], maxlen)
 		{
 			iPlayer = iPlayers[i]
 
-			client_print_color(iPlayer, print_chat, "^4%s ^1%L", g_szPrefix, LANG_SERVER, "MIX_PLAYER_DROPPED", g_ePlayerData[id][szName], g_iTime / 60)
+			client_print_color(iPlayer, print_team_default, "^4%s ^1%L", g_szPrefix, LANG_SERVER, "MIX_PLAYER_DROPPED", g_ePlayerData[id][szName], g_iTime / 60)
 		}
 
 		set_task(float(g_iTime), "task_check_time", TASK_CHECK_TIME)
@@ -114,9 +118,16 @@ public task_check_time(id)
 			new szTemp[100]
 			formatex(szTemp, charsmax(szTemp), "amx_addban ^"%s^" ^"%s^" %d ^"%L^"", iData[szName], iData[szSteamID], g_iBanTime, LANG_SERVER, "MIX_PLAYER_DROPPED_REASON")
 			
-			Mix_SearchForUser(iData[szSteamID], g_iSubstractPoints, false)
+			if(Mix_HasPointsSys())
+			{
+				Mix_SearchForUser(iData[szSteamID], g_iSubstractPoints, false)
+				client_print_color(0, print_team_default, "^4%s ^1%L", g_szPrefix, LANG_SERVER, "MIX_PLAYER_DROPPED_PUNISH_P", iData[szName], g_iBanTime / 60, g_iSubstractPoints)
+			}
+			else
+			{
+				client_print_color(0, print_team_default, "^4%s ^1%L", g_szPrefix, LANG_SERVER, "MIX_PLAYER_DROPPED_PUNISH", iData[szName], g_iBanTime / 60)
+			}
 
-			client_print_color(0, print_chat, "^4%s ^1%L", g_szPrefix, LANG_SERVER, "MIX_PLAYER_DROPPED_PUNISH", iData[szName], g_iBanTime / 60, g_iSubstractPoints)
 			server_cmd(szTemp)
 			server_exec()
 			ArrayDeleteItem(g_aDroppedPlayers, i)
