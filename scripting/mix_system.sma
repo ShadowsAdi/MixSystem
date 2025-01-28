@@ -1,18 +1,28 @@
 /* Sublime AMXX Editor v4.2 */
 
-/* Utilizare sistem de puncte */
+/* 	Activare sistem de puncte 
+	Activate Points system 
+*/
 #define POINTS_SYS
 
-/* Mod Fastcup ( /start, runda de cutite automata, alegere a echipei de catre echipa castigatoare )*/
+/* 	Mod Fastcup ( /start, runda de cutite automata, alegere a echipei de catre echipa castigatoare ) 
+	Fastcup Mode ( /start, automatic knife round, choose start side by winning team )
+*/
 #define FASTCUP_MODE
 
-/* Modificarea indicilor kickback ale armelor care suporta acest lucru */
+/* 	Modificarea indicilor kickback ale armelor care suporta acest lucru 
+	Modifying supported weapons kickback angles
+*/
 //#define PUNCH_ANGLE
 
-/* Optiuni pentru debugging, nu recomand a se porni doar daca se testeaza */
+/* 	Optiuni pentru debugging, nu recomand a se porni daca nu se testeaza 
+	Debugging messages, uncomment only if you're testing
+*/
 //#define DEBUG
 
-/* Overtime-ul este doar de o runda, setarile din overtime.cfg se aplica */
+/* 	Overtime-ul este doar de o runda, setarile din overtime.cfg se aplica 
+   	Only one round of overtime, settings from overtime.cfg applies
+*/
 //#define OVERTIME_ONE_ROUND
 
 #include <amxmodx>
@@ -31,7 +41,7 @@
 #define PLUGIN  "Mix System ~ Fastcup Mode"
 #endif
 
-#define VERSION "2.17.0"
+#define VERSION "2.18.0"
 #define AUTHOR  "Shadows Adi"
 
 #define IsPlayer(%1)				((1 <= %1 <= MAX_PLAYERS) && is_user_connected(%1))
@@ -125,7 +135,7 @@ new const POINTS_PLANTED[]		=		"POINTS_PLANTED"
 new const POINTS_ACE[]			=		"POINTS_ACE"
 new const POINTS_SEMIACE[]		=		"POINTS_SEMIACE"
 new const POINTS_TWIN[]			=		"POINTS_TEAM_WIN"
-new const POINTS_DIFF_FACTOR[]	= 		"POINTS_DIFF_FACTOR"
+new const POINTS_SHOW_NAME[]	=		"POINTS_SHOW_NAME"
 #endif
 
 #if defined POINTS_SYS
@@ -331,7 +341,8 @@ enum _:PointsSystem
 	PointsPlanted,
 	PointsAce,
 	PointsSemiAce,
-	PointsTeamWin
+	PointsTeamWin,
+	PointsShowName
 }
 
 enum
@@ -468,14 +479,20 @@ public plugin_init()
 	#endif 
 
 	g_eForwards[Kill] = CreateMultiForward("mix_player_killed", ET_IGNORE, FP_CELL, FP_CELL, FP_CELL, FP_STRING, FP_STRING)
-	g_eForwards[GameOver] = CreateMultiForward("mix_game_over", ET_IGNORE, FP_CELL, FP_CELL, FP_CELL, FP_CELL)
 	g_eForwards[GameBeginPre] = CreateMultiForward("mix_game_begin_pre", ET_IGNORE)
+	#if defined POINTS_SYS
+	g_eForwards[GameOver] = CreateMultiForward("mix_game_over", ET_IGNORE, FP_CELL, FP_CELL, FP_CELL, FP_CELL)
 	g_eForwards[GameBeginPost] = CreateMultiForward("mix_game_begin_post", ET_IGNORE, FP_CELL, FP_CELL, FP_STRING, FP_STRING, FP_CELL)
 	g_eForwards[GameStopped] = CreateMultiForward("mix_game_stopped", ET_IGNORE, FP_CELL, FP_CELL, FP_CELL)
-	g_eForwards[NewRound] = CreateMultiForward("mix_game_new_round", ET_IGNORE, FP_CELL, FP_CELL, FP_CELL)
 	g_eForwards[DatabaseConnected] = CreateMultiForward("mix_database_connected", ET_IGNORE, FP_CELL, FP_CELL)
 	g_eForwards[Winners] = CreateMultiForward("mix_match_winner", ET_IGNORE, FP_CELL)
 	g_eForwards[Save] = CreateMultiForward("mix_user_save", ET_IGNORE, FP_CELL)
+	#else
+	g_eForwards[GameOver] = CreateMultiForward("mix_game_over", ET_IGNORE, FP_CELL, FP_CELL, FP_CELL)
+	g_eForwards[GameBeginPost] = CreateMultiForward("mix_game_begin_post", ET_IGNORE, FP_CELL, FP_CELL, FP_STRING, FP_STRING)
+	g_eForwards[GameStopped] = CreateMultiForward("mix_game_stopped", ET_IGNORE, FP_CELL, FP_CELL)
+	#endif
+	g_eForwards[NewRound] = CreateMultiForward("mix_game_new_round", ET_IGNORE, FP_CELL, FP_CELL, FP_CELL)
 	
 	new pcvar = get_cvar_pointer("amx_mode")
 	if(pcvar != 0)
@@ -527,6 +544,7 @@ public plugin_natives()
 	#if defined POINTS_SYS
 	register_native("Mix_SearchForUser", "native_search_for_user")
 	register_native("Mix_UserPoints", "native_user_points")
+	register_native("Mix_GetPointsTable", "native_get_points_table")
 	#endif
 	register_native("Mix_HasPointsSys", "native_has_points_sys")
 }
@@ -1069,6 +1087,10 @@ ReadConfig()
 					{
 						g_ePointSystem[PointsTeamWin] = str_to_num(szValue)
 					}
+					else if(equal(szString, POINTS_SHOW_NAME))
+					{
+						g_ePointSystem[PointsShowName] = str_to_num(szValue)
+					}
 				}
 				case RANK_SYSTEM:
 				{
@@ -1110,7 +1132,7 @@ public DatabaseConnect()
 
 	ExecuteForward(g_eForwards[DatabaseConnected], g_iRet, g_hSqlTuple, g_iSqlConnection)
 
-	new szQueryData[256];
+	new szQueryData[380];
 	formatex(szQueryData, charsmax(szQueryData), "CREATE TABLE IF NOT EXISTS `%s` \
 		(`ID` INT NOT NULL AUTO_INCREMENT,\
 		`SteamID` VARCHAR(32),\
@@ -1120,6 +1142,7 @@ public DatabaseConnect()
 		`Deaths` INT NOT NULL,\
 		`Wins` INT NOT NULL, \
 		`Lose` INT NOT NULL, \
+		`Online` TINYINT(1) NOT NULL DEFAULT ^"0^", \
 		PRIMARY KEY(ID, SteamID));", g_ePluginSettings[szTable])
 
 	SQL_ThreadQuery(g_hSqlTuple, "QueryHandlerTable", szQueryData)
@@ -1131,11 +1154,11 @@ public QueryHandlerTable(iFailState, Handle:iQuery, szError[], iErrorCode, szQue
 	{
 		case TQUERY_CONNECT_FAILED: 
 		{
-			log_amx("[SQL Error Save] Connection failed (%i): %s", iErrorCode, szError);
+			log_amx("[SQL Error Table] Connection failed (%i): %s", iErrorCode, szError);
 		}
 		case TQUERY_QUERY_FAILED:
 		{
-			log_amx("[SQL Error Save] Query failed (%i): %s", iErrorCode, szError);
+			log_amx("[SQL Error Table] Query failed (%i): %s", iErrorCode, szError);
 			log_amx("Query: %s", szQuery)
 		}
 	}
@@ -1179,13 +1202,13 @@ public client_authorized(id, const authid[])
 
 public client_disconnected(id)
 {
-	if(is_bot(id) || !is_user_connected(id))
+	if(is_bot(id))
 		return
 
 	#if defined POINTS_SYS
 	if(g_bConnected && g_bLoadedPlayer[id])
 	{
-		SaveData(id)
+		SaveData(id, true)
 	}
 
 	set_user_info(id, name, g_szName[id])
@@ -1489,7 +1512,15 @@ public RG_Player_Spawn_Post(id)
 		}
 
 		new tmpName[32]
-		formatex(tmpName, charsmax(tmpName), "%s <%s>", g_szName[id], aRank[szRank])
+		formatex(tmpName, charsmax(tmpName), "%s", g_szName[id])
+		if(g_ePointSystem[PointsShowName])
+		{
+			format(tmpName, charsmax(tmpName), "%s <%d>", tmpName, g_iPoints[id])
+		}
+		else
+		{
+			format(tmpName, charsmax(tmpName), "%s <%s>", tmpName, aRank[szRank])
+		}
 		set_user_info(id, name, tmpName)
 	}
 }
@@ -1649,7 +1680,7 @@ public clcmd_startmix(id, bool:bKnife)
 				}
 
 				#if defined POINTS_SYS
-				ExecuteForward(g_eForwards[GameBeginPost], g_iRet, iPlayer, bFinished ? 1 : 0, g_szAuthID[iPlayer], g_szName[iPlayer], g_iPoints[id])
+				ExecuteForward(g_eForwards[GameBeginPost], g_iRet, iPlayer, bFinished ? 1 : 0, g_szAuthID[iPlayer], g_szName[iPlayer], g_iPoints[iPlayer])
 				#else
 				ExecuteForward(g_eForwards[GameBeginPost], g_iRet, iPlayer, bFinished ? 1 : 0, g_szAuthID[iPlayer], g_szName[iPlayer])
 				#endif
@@ -2210,7 +2241,7 @@ public task_end_round(index)
 			}
 
 			#if defined POINTS_SYS
-			SaveData(iPlayer)
+			SaveData(iPlayer, false)
 			#endif
 		}
 
@@ -3635,7 +3666,7 @@ public QueryLoadData(iFailState, Handle:iQuery, szError[], iErrorCode, szData[])
 		g_iLose[id] = SQL_ReadResult(iQuery, SQL_FieldNameToNum(iQuery, "Lose"));
 		g_bLoadedPlayer[id] = true
 
-		return
+		goto _markOnline
 	}
 
 	new szQuery[256]
@@ -3647,10 +3678,16 @@ public QueryLoadData(iFailState, Handle:iQuery, szError[], iErrorCode, szData[])
 		`Kills`,\
 		`Deaths`,\
 		`Wins`,\
-		`Lose` \
-		) VALUES ('%s', ^"%s^", '0', '0', '0', '0', '0');", g_ePluginSettings[szTable], g_szAuthID[id], g_szName[id]);
+		`Lose`, \
+		`Online` \
+		) VALUES ('%s', ^"%s^", '0', '0', '0', '0', '0', '1');", g_ePluginSettings[szTable], g_szAuthID[id], g_szName[id]);
 
 	SQL_ThreadQuery(g_hSqlTuple, "LoadPData", szQuery, szData, strlen(szData));
+
+	_markOnline:
+	formatex(szQuery, charsmax(szQuery), "UPDATE `%s` SET `Online`='1' WHERE `SteamID`=^"%s^";", g_ePluginSettings[szTable], g_szAuthID[id]);
+
+	SQL_ThreadQuery(g_hSqlTuple, "QueryHandler", szQuery, szQuery, charsmax(szQuery));
 }
 
 public LoadPData(iFailState, Handle:iQuery, szError[], iErrorCode, szData[])
@@ -3673,11 +3710,11 @@ public LoadPData(iFailState, Handle:iQuery, szError[], iErrorCode, szData[])
 	g_bLoadedPlayer[id] = true
 }
 
-public SaveData(id)
+public SaveData(id, bool:bDisconnect)
 {
 	ExecuteForward(g_eForwards[Save], g_iRet, id)
 
-	new szQuery[180]
+	new szQuery[220]
 	formatex(szQuery, charsmax(szQuery), "UPDATE `%s` \
 		SET `Points`='%d', \
 		`Name`=^"%s^", \
@@ -3688,6 +3725,21 @@ public SaveData(id)
 		WHERE `SteamID`=^"%s^";", g_ePluginSettings[szTable], g_iPoints[id], g_szName[id], g_iKills[id], g_iDeaths[id], g_iWins[id], g_iLose[id], g_szAuthID[id])
 
 	SQL_ThreadQuery(g_hSqlTuple, "QueryHandler", szQuery, szQuery, charsmax(szQuery));
+
+	if(bDisconnect)
+	{
+		formatex(szQuery, charsmax(szQuery), "UPDATE `%s` SET `Online`='0' WHERE `SteamID`=^"%s^";", g_ePluginSettings[szTable], g_szAuthID[id]);
+
+
+		new Handle:iQuery = SQL_PrepareQuery(g_iSqlConnection, szQuery)
+				
+		if(!SQL_Execute(iQuery))
+		{
+			SQL_QueryError(iQuery, g_szSqlError, charsmax(g_szSqlError))
+			log_to_file("mix_system.log", g_szSqlError)
+			SQL_FreeHandle(iQuery)
+		}
+	}
 }
 
 public QueryHandler(iFailState, Handle:iQuery, szError[], iErrorCode, szQuery[])
@@ -4178,6 +4230,20 @@ public native_user_points(iPluginID, iParamNum)
 
 	return g_iPoints[id]
 }
+
+public native_get_points_table(iPluginID, iParamNum)
+{
+	if(!g_bConnected)
+	{
+		log_error(AMX_ERR_NATIVE, "%s Database connection was not established", g_ePluginSettings[szPrefix])
+		return NATIVE_ERROR
+	}
+
+	set_string(1, g_ePluginSettings[szTable], get_param(2))
+
+	return 1
+}
+
 #endif
 
 public native_has_points_sys(iPluginID, iParamNum)

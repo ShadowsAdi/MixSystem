@@ -9,7 +9,7 @@
 #include <reapi>
 
 #define PLUGIN  "[MIX System] Player's Data + Match Data"
-#define VERSION "1.8.2"
+#define VERSION "1.8.3"
 #define AUTHOR  "Shadows Adi"
 
 new Handle:g_hSqlTuple
@@ -46,6 +46,8 @@ new bool:g_bPlayerInTeam[MAX_PLAYERS + 1]
 
 new g_szHostname[MAX_HOSTNAME_LEN]
 
+new g_iDuration
+
 public plugin_init() 
 {
 	register_plugin(PLUGIN, VERSION, AUTHOR)
@@ -65,6 +67,22 @@ public plugin_init()
 		log_amx("[MIX System] Plugin ^"%s^" has been stopped because main plugin has no Points System active.", szPluginName)
 		pause("a")
 	}
+}
+
+public plugin_natives()
+{
+	set_native_filter("native_filter")
+}
+
+public native_filter(const szNative[], index, trap)
+{
+	if(!trap)
+	{
+		if(equal(szNative, "Mix_UserPoints"))
+			return PLUGIN_HANDLED
+	}
+
+	return PLUGIN_CONTINUE
 }
 
 public plugin_cfg()
@@ -100,7 +118,8 @@ public mix_database_connected(Handle:hTuple, Handle:iSqlConn)
 	  `Duration` int(11) NOT NULL DEFAULT 0,\
 	  `Team` varchar(18) DEFAULT '0',\
 	  `Dropped` int(11) NOT NULL DEFAULT 0,\
-	  `Points` int(11) NOT NULL DEFAULT 0,\
+	  `PointsStart` int(11) NOT NULL DEFAULT 0,\
+	  `PointsEnd` int(11) NOT NULL DEFAULT 0,\
 	  `MVPS` int(11) NOT NULL DEFAULT 0,\
 	  `Winner` int(1) NOT NULL DEFAULT 0,\
 		PRIMARY KEY(MatchID, SteamID));", PLAYERS_TABLE)
@@ -121,6 +140,26 @@ public mix_database_connected(Handle:hTuple, Handle:iSqlConn)
 		PRIMARY KEY(MatchID));", MATCH_TABLE)
 
 	SQL_ThreadQuery(g_hSqlTuple, "QueryHandler", szQueryData)
+
+	new szTemp[32]
+	Mix_GetPointsTable(szTemp, charsmax(szTemp))
+
+	formatex(szQueryData, charsmax(szQueryData), "SELECT `JoinDate` FROM  `%s`", szTemp)
+
+	new Handle:iQueries = SQL_PrepareQuery(g_iSqlConnection, szQueryData)
+
+	if(!SQL_Execute(iQueries))
+	{
+		SQL_QueryError(iQueries, g_szSqlError, charsmax(g_szSqlError))
+
+		if(containi(g_szSqlError, "Unknown column") != -1)
+		{
+			formatex(szQueryData, charsmax(szQueryData), "ALTER TABLE `%s` ADD `JoinDate` DATE NOT NULL DEFAULT current_timestamp(), \
+			    ADD `LastSeenDate` DATETIME NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()", szTemp)
+
+			SQL_ThreadQuery(g_hSqlTuple, "QueryHandler", szQueryData)
+		}
+	}
 }
 
 public client_authorized(id, const authid[])
@@ -131,6 +170,8 @@ public client_authorized(id, const authid[])
 public mix_game_begin_pre()
 {
 	g_iGameID = 0
+
+	g_iDuration = 0
 
 	DefineGame()
 }
@@ -173,6 +214,8 @@ public mix_player_killed(iVictim, iAttacker, bHeadshot, szName[], szAuthID[])
 
 public mix_game_over(id, iDuration, iTeamWon, iPoints)
 {
+	g_iDuration = iDuration
+
 	new CsTeams:iTeam = cs_get_user_team(id)
 	new szTemp[3]
 
@@ -202,11 +245,19 @@ public mix_game_over(id, iDuration, iTeamWon, iPoints)
 
 public mix_game_stopped(id, iDuration, iPoints)
 {
+	g_iDuration = iDuration
 	UpdateGame(iDuration, "Canceled")
 }
 
 public mix_match_winner(iPlayer)
 {
+	new szQuery[128]
+	formatex(szQuery, charsmax(szQuery), "UPDATE `%s` \
+		SET `Winner` = '1' \
+		WHERE `SteamID`=^"%s^" AND `MatchID` = '%d';", PLAYERS_TABLE, g_ePlayerData[iPlayer][sSteamID], g_iGameID)
+
+	SQL_ThreadQuery(g_hSqlTuple, "QueryHandler", szQuery, szQuery, sizeof(szQuery))
+
 	g_ePlayerData[iPlayer][iWins] += 1
 }
 
@@ -233,6 +284,8 @@ public client_disconnected(id, bool:drop, message[], maxlen)
 
 public mix_game_new_round(iCTScore, iTeroScore, iDuration)
 {
+	g_iDuration = iDuration
+
 	new szQuery[120]
 
 	formatex(szQuery, charsmax(szQuery), "UPDATE `%s` SET `CTScore`='%d', `TSCORE`='%d', `Duration`='%d' WHERE `MatchID` = '%d';", MATCH_TABLE, iCTScore, iTeroScore, iDuration, g_iGameID)
@@ -352,10 +405,12 @@ public mix_user_save(iPlayer)
 		`HS`='%d', \
 		`Deaths`='%d',\
 		`MVPS`='%d', \
+		`PointsStart`='%d', \
+		`PointsEnd`='%d', \
 		`Team`='%s' \
 		WHERE `SteamID`=^"%s^" AND `MatchID` = '%d';",
 		PLAYERS_TABLE, g_ePlayerData[iPlayer][sName], g_ePlayerData[iPlayer][iKills], g_ePlayerData[iPlayer][iHS],
-		g_ePlayerData[iPlayer][iDeaths], g_ePlayerData[iPlayer][iMVP], g_ePlayerData[iPlayer][szTeam], g_ePlayerData[iPlayer][sSteamID], g_iGameID)
+		g_ePlayerData[iPlayer][iDeaths], g_ePlayerData[iPlayer][iMVP], g_ePlayerData[iPlayer][iUserPoints], Mix_UserPoints(iPlayer), g_ePlayerData[iPlayer][szTeam], g_ePlayerData[iPlayer][sSteamID], g_iGameID)
 
 	SQL_ThreadQuery(g_hSqlTuple, "QueryHandler", szQuery)
 }
@@ -431,10 +486,11 @@ public QueryHandlerLoad(iFailState, Handle:iQuery, szError[], iErrorCode, sTemp[
 			`Duration`,\
 			`Team`,\
 			`Dropped`, \
-			`Points`,\
+			`PointsStart`,\
+			`PointsEnd`,\
 			`MVPS`,\
 			`Winner`\
-			) VALUES ('%d', ^"%s^", ^"%s^", '0', '0', '0', '0', '0', '%s', '0', '0', '0', '0');", PLAYERS_TABLE, g_iGameID, g_ePlayerData[id][sSteamID], g_ePlayerData[id][sName], g_ePlayerData[id][szTeam]);
+			) VALUES ('%d', ^"%s^", ^"%s^", '0', '0', '0', '0', '0', '%s', '0', '0', '0', '0', '0');", PLAYERS_TABLE, g_iGameID, g_ePlayerData[id][sSteamID], g_ePlayerData[id][sName], g_ePlayerData[id][szTeam]);
 	}
 	else
 	{
@@ -500,6 +556,14 @@ public QueryHandler(iFailState, Handle:iQuery, szError[], iErrorCode)
 	}
 }
 
+public server_changelevel()
+{
+	if(Mix_IsStarted())
+	{
+		UpdateGame(g_iDuration, "Canceled", true)
+	}
+}
+
 stock SQL_Exec(Handle:iQuery, szQueryData[])
 {
 	if(!SQL_Execute(iQuery))
@@ -535,13 +599,23 @@ DefineGame()
 		SQL_FreeHandle(iQuery)
 }
 
-UpdateGame(iDuration, sTeam[] = "In Progress")
+UpdateGame(iDuration, sTeam[] = "In Progress", bool:bIntermission = false)
 {
 	new szQuery[200]
 
 	formatex(szQuery, charsmax(szQuery), "UPDATE `%s` SET `Duration`='%d', `Winner`=^"%s^", `Status` = ^"Finished^" WHERE `MatchID` = '%d';", MATCH_TABLE, iDuration, sTeam, g_iGameID)
 
-	SQL_ThreadQuery(g_hSqlTuple, "QueryHandler", szQuery)
+	if(bIntermission)
+	{
+		new Handle:iQuery = SQL_PrepareQuery(g_iSqlConnection, szQuery);
+
+		SQL_Exec(iQuery, szQuery)
+	}
+	else 
+	{
+		SQL_ThreadQuery(g_hSqlTuple, "QueryHandler", szQuery)
+	}
+	
 }
 
 LoadData(id)

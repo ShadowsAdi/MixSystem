@@ -88,7 +88,7 @@ native Mix_GetUserName(id, name[], len)
  * Copy Chat prefix.
  *
  * @param szPrefix  Array to copy the string
- * @param iLen      Array lenght
+ * @param iLen      Array length
  * 
  * @type            String
  * @noreturn        
@@ -126,6 +126,18 @@ native Mix_MultiplyFactor(id, iFactor)
  * @return          True if it is, false otherwise.
  */
 native Mix_HasPointsSys()
+
+/**
+ * Returns if points system is active.
+ *
+ * @param szTable   Array to copy the string
+ * @param iLen      Array length
+ * 
+ * @type            String
+ * 
+ * @return          Points main table name if the connection was established
+ */
+native Mix_GetPointsTable(szTable[], iLen)
 
 /**
  * Called when a player is killed during a game.

@@ -4,7 +4,7 @@
 #include <mix_system>
 
 #define PLUGIN  "[MIX System] Player Drop"
-#define VERSION "1.1.0"
+#define VERSION "1.2.0"
 #define AUTHOR  "Shadows Adi"
 
 #define TASK_CHECK_TIME 19210
@@ -43,6 +43,19 @@ public plugin_init()
 public plugin_natives()
 {
 	g_aDroppedPlayers = ArrayCreate(PlayerData)
+
+	set_native_filter("native_filter")
+}
+
+public native_filter(const szNative[], index, trap)
+{
+	if(!trap)
+	{
+		if(equal(szNative, "Mix_UserPoints"))
+			return PLUGIN_HANDLED
+	}
+
+	return PLUGIN_CONTINUE
 }
 
 public OnConfigsExecuted()
