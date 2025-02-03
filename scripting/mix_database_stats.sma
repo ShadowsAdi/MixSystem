@@ -9,7 +9,7 @@
 #include <reapi>
 
 #define PLUGIN  "[MIX System] Player's Data + Match Data"
-#define VERSION "1.8.3"
+#define VERSION "1.8.4"
 #define AUTHOR  "Shadows Adi"
 
 new Handle:g_hSqlTuple
@@ -52,14 +52,6 @@ public plugin_init()
 {
 	register_plugin(PLUGIN, VERSION, AUTHOR)
 
-	RegisterHookChain(RG_RoundEnd, "RG_Round_End")
-	RegisterHookChain(RG_CSGameRules_RestartRound, "RG_RestartRound", 1)
-	RegisterHookChain(RG_HandleMenu_ChooseTeam, "RG_ChooseTeam_Post", 1)
-
-	get_mapname(g_szMap, charsmax(g_szMap))
-
-	g_aPlayerDropped = ArrayCreate(32)
-
 	if(!Mix_HasPointsSys())
 	{
 		new szPluginName[32]
@@ -67,6 +59,14 @@ public plugin_init()
 		log_amx("[MIX System] Plugin ^"%s^" has been stopped because main plugin has no Points System active.", szPluginName)
 		pause("a")
 	}
+
+	RegisterHookChain(RG_RoundEnd, "RG_Round_End")
+	RegisterHookChain(RG_CSGameRules_RestartRound, "RG_RestartRound", 1)
+	RegisterHookChain(RG_HandleMenu_ChooseTeam, "RG_ChooseTeam_Post", 1)
+
+	get_mapname(g_szMap, charsmax(g_szMap))
+
+	g_aPlayerDropped = ArrayCreate(32)
 }
 
 public plugin_natives()
@@ -103,7 +103,7 @@ public mix_database_connected(Handle:hTuple, Handle:iSqlConn)
 	if(g_iSqlConnection == Empty_Handle)
 	{
 		log_to_file("mix_system.log", "{%s} Failed to connect to database. Make sure databse settings are right!", PLUGIN)
-		SQL_FreeHandle(g_iSqlConnection)
+		return
 	}
 
 	new szQueryData[612];
@@ -127,7 +127,8 @@ public mix_database_connected(Handle:hTuple, Handle:iSqlConn)
 	SQL_ThreadQuery(g_hSqlTuple, "QueryHandler", szQueryData)
 
 	formatex(szQueryData, charsmax(szQueryData), "CREATE TABLE IF NOT EXISTS `%s` \
-	(`Server` varchar(5) NOT NULL,\
+	(`MatchID` int(11) NOT NULL AUTO_INCREMENT ,\
+	`Server` TEXT NOT NULL,\
 	`Duration` int(11) NOT NULL,\
 	  `Map` varchar(48) DEFAULT NULL,\
 	  `Winner` varchar(12) DEFAULT 'In Progress',\
