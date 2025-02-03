@@ -41,7 +41,7 @@
 #define PLUGIN  "Mix System ~ Fastcup Mode"
 #endif
 
-#define VERSION "2.18.0"
+#define VERSION "2.18.1"
 #define AUTHOR  "Shadows Adi"
 
 #define IsPlayer(%1)				((1 <= %1 <= MAX_PLAYERS) && is_user_connected(%1))
@@ -1124,8 +1124,7 @@ public DatabaseConnect()
 	if(g_iSqlConnection == Empty_Handle)
 	{
 		log_to_file("mix_system.log", "%s Failed to connect to database. Make sure databse settings are right!", g_ePluginSettings[szPrefix])
-		SQL_FreeHandle(g_iSqlConnection)
-
+		return 
 	}
 
 	g_bConnected = true
@@ -1168,6 +1167,7 @@ public QueryHandlerTable(iFailState, Handle:iQuery, szError[], iErrorCode, szQue
 public client_authorized(id, const authid[])
 {
 	copy(g_szAuthID[id], charsmax(g_szAuthID[]), authid)
+	get_user_name(id, g_szName[id], charsmax(g_szName[]))
 
 	#if defined POINTS_SYS
 	g_iPoints[id] = 0
@@ -1176,7 +1176,6 @@ public client_authorized(id, const authid[])
 	g_iWins[id] = 0
 	g_iLose[id] = 0
 	g_bLoadedPlayer[id] = false
-	get_user_name(id, g_szName[id], charsmax(g_szName[]))
 
 	if(!is_bot(id) && g_bConnected)
 	{
@@ -2177,12 +2176,17 @@ public task_end_round(index)
 							iDamageTaken = 100
 						}
 
-						if(i != j && iTeam != cs_get_user_team(iPlayer) && (iDamageGiven || iDamageTaken))
+						if(i != j && iTeam != cs_get_user_team(iPlayer))
 						{
+							if(!(iDamageGiven || iDamageTaken))
+								continue
+
 							iHitsGiven = g_ePlayerStats[iPlayer][iVictim][HitsGiven]
 							iHitsTaken = g_ePlayerStats[iVictim][iPlayer][HitsGiven]
 
-							client_print_color(iPlayer, print_chat, "^4%s %s ^1(^4%d ^1in^4 %d^1) damage, (^4%d^1 in^4 %d^1) primit.", g_ePluginSettings[szPrefix], g_szName[iVictim], iDamageGiven, iHitsGiven, iDamageTaken, iHitsTaken)
+							client_print_color(iPlayer, print_chat, "^4%s ^1%s (^4%d ^1%L^4 %d^1) %L, (^4%d^1 %L^4 %d^1) %L.", 
+							                   g_ePluginSettings[szPrefix], g_szName[iVictim], iDamageGiven, LANG_PLAYER, "IN",
+							                    iHitsGiven, LANG_PLAYER, "DAMAGE", iDamageTaken, LANG_PLAYER, "IN", iHitsTaken, LANG_PLAYER, "RECEIVED")
 						}
 					}
 				}
@@ -2292,7 +2296,7 @@ public task_ask_player(id)
 	formatex(szTemp, charsmax(szTemp), "\y%L", LANG_SERVER, "ASK_MENU_SWITCH")
 	menu_additem(menu, szTemp)
 
-	formatex(szTemp, charsmax(szTemp), "\y%L", LANG_SERVER, "AKS_MENU_STAY")
+	formatex(szTemp, charsmax(szTemp), "\y%L", LANG_SERVER, "ASK_MENU_STAY")
 	menu_additem(menu, szTemp)
 
 	_MenuDisplay(id, menu)

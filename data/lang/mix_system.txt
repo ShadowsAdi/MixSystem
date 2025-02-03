@@ -26,7 +26,7 @@ DRAW = Draw
 
 MENU_ASK_PLAYER = What do you choose?
 ASK_MENU_SWITCH = Switch?
-AKS_MENU_STAY = Stay?
+ASK_MENU_STAY = Stay?
 
 TEAM_VOTED = ^1The winning team chose to ^4
 SWITCH = switch teams^1.
@@ -135,6 +135,12 @@ MIX_PLAYER_DROPPED_PUNISH_P = Player ^4%s^1 did not reconnect. They have been ba
 MIX_PLAYER_DROPPED_PUNISH = Player ^4%s^1 did not reconnect. They have been banned for ^4%d^1 hours.
 MIX_PLAYER_DROPPED_REASON = You left the mix!
 
+IN = in
+DAMAGE = damage
+RECEIVED = received
+
+MIX_NEED_STOP_TO_CHANGEMAP = Mix needs to be ^3stopped^1 to change the map.
+
 [ro]
 YOU_DONT_HAVE_ACCESS = ^1Nu ai acces la aceasta comanda!
 
@@ -163,7 +169,7 @@ DRAW = Egalitate
 
 MENU_ASK_PLAYER = Ce alegi?
 ASK_MENU_SWITCH = Schimbam?
-AKS_MENU_STAY = Stam?
+ASK_MENU_STAY = Stam?
 
 TEAM_VOTED = ^1Echipa castigatoare a ales ^4
 SWITCH = sa schimbe echipele^1.
@@ -272,6 +278,12 @@ MIX_PLAYER_DROPPED_PUNISH_P = Jucatorul ^4%s^1 nu s-a mai reconectat. A fost ban
 MIX_PLAYER_DROPPED_PUNISH = Jucatorul ^4%s^1 nu s-a mai reconectat. A fost banat ^4%d^1 ore.
 MIX_PLAYER_DROPPED_REASON = Ai parasit mix-ul!
 
+IN = in
+DAMAGE = damage
+RECEIVED = primit
+
+MIX_NEED_STOP_TO_CHANGEMAP = Mix-ul trebuie sa fie ^3oprit^1 pentru a putea schimba harta.
+
 [ru]
 YOU_DONT_HAVE_ACCESS = ^1Вы не имеете доступа к этой команде!
 
@@ -300,7 +312,7 @@ DRAW = Ничья
 
 MENU_ASK_PLAYER = Что вы выбираете?
 ASK_MENU_SWITCH = Перейти?
-AKS_MENU_STAY = Остаться?
+ASK_MENU_STAY = Остаться?
 
 TEAM_VOTED = ^1Победившая команда выбрала ^4
 SWITCH = смену сторон^1.
@@ -408,3 +420,9 @@ MIX_PLAYER_DROPPED = Игрок ^4%s^1 отключился. Ожидание ^4
 MIX_PLAYER_DROPPED_PUNISH_P = Игрок ^4%s^1 не переподключился. Он был забанен на ^4%d^1 часов и потерял ^4%d^1 очков.
 MIX_PLAYER_DROPPED_PUNISH = Игрок ^4%s^1 не переподключился. Он был забанен на ^4%d^1 часов.
 MIX_PLAYER_DROPPED_REASON = Вы покинули микс!
+
+IN = в
+DAMAGE = урон
+RECEIVED = принятый
+
+MIX_NEED_STOP_TO_CHANGEMAP = Чтобы иметь возможность сменить карту, игра должна быть ^3остановлена^1.
