@@ -10,8 +10,10 @@
 > - ReAPI v5.24.0.300+
 
 ## Install
-Download latest release from [here](https://github.com/ShadowsAdi/MixSystem/archive/main.zip).
-Extract the archive and drag and drop files in your 'cstrike/addons/amxmodx' folder and compile the source code (.sma).
+1. Download latest release from [here](https://github.com/ShadowsAdi/MixSystem/archive/main.zip).
+2. Download and extract ReAPI includes in your 'include' folder from [here](https://github.com/rehlds/ReAPI/releases/latest).
+3. Make sure the server runs on minimum requirements (run commands in server's console: 'version', 'game version', 'meta list').
+4. Extract the *MixSystem* archive and drag and drop files in your 'cstrike/addons/amxmodx' folder and compile the source code (.sma).
 
 ## Docs
 System has in total, 9 forwards and 11 natives.
