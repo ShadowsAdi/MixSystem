@@ -102,11 +102,11 @@ public mix_database_connected(Handle:hTuple, Handle:iSqlConn)
 
 	if(g_iSqlConnection == Empty_Handle)
 	{
-		log_to_file("mix_system.log", "{%s} Failed to connect to database. Make sure databse settings are right!", PLUGIN)
+		log_to_file("mix_system_stats.log", "{%s} Failed to connect to database. Make sure databse settings are right!", PLUGIN)
 		return
 	}
 
-	new szQueryData[612];
+	new szQueryData[800];
 	formatex(szQueryData, charsmax(szQueryData), "CREATE TABLE IF NOT EXISTS `%s` \
 	(`MatchID` int(11) NOT NULL,\
 	  `SteamID` varchar(32) NOT NULL,\
@@ -122,6 +122,7 @@ public mix_database_connected(Handle:hTuple, Handle:iSqlConn)
 	  `PointsEnd` int(11) NOT NULL DEFAULT 0,\
 	  `MVPS` int(11) NOT NULL DEFAULT 0,\
 	  `Winner` int(1) NOT NULL DEFAULT 0,\
+	  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(), \
 		PRIMARY KEY(MatchID, SteamID));", PLAYERS_TABLE)
 
 	SQL_ThreadQuery(g_hSqlTuple, "QueryHandler", szQueryData)
@@ -134,10 +135,11 @@ public mix_database_connected(Handle:hTuple, Handle:iSqlConn)
 	  `Winner` varchar(12) DEFAULT 'In Progress',\
 	  `CTScore` int(11) NOT NULL,\
 	  `TSCORE` int(11) NOT NULL,\
-	  `Timestamp` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\
+	  `Timestamp` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\
 	  `CT` VARCHAR(32) NOT NULL DEFAULT 'CT',\
 	  `TE` VARCHAR(32) NOT NULL DEFAULT 'T',\
 	  `Status` VARCHAR(32) NOT NULL DEFAULT 'In Progress',\
+	  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(), \
 		PRIMARY KEY(MatchID));", MATCH_TABLE)
 
 	SQL_ThreadQuery(g_hSqlTuple, "QueryHandler", szQueryData)
@@ -155,8 +157,8 @@ public mix_database_connected(Handle:hTuple, Handle:iSqlConn)
 
 		if(containi(g_szSqlError, "Unknown column") != -1)
 		{
-			formatex(szQueryData, charsmax(szQueryData), "ALTER TABLE `%s` ADD `JoinDate` DATE NOT NULL DEFAULT current_timestamp(), \
-			    ADD `LastSeenDate` DATETIME NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()", szTemp)
+			formatex(szQueryData, charsmax(szQueryData), "ALTER TABLE `%s` ADD `JoinDate` DATE, \
+			    ADD `LastSeenDate` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()", szTemp)
 
 			SQL_ThreadQuery(g_hSqlTuple, "QueryHandler", szQueryData)
 		}
@@ -260,6 +262,8 @@ public mix_match_winner(iPlayer)
 	SQL_ThreadQuery(g_hSqlTuple, "QueryHandler", szQuery, szQuery, sizeof(szQuery))
 
 	g_ePlayerData[iPlayer][iWins] += 1
+
+	mix_user_save(iPlayer)
 }
 
 SetDropped(id)
@@ -460,12 +464,12 @@ public QueryHandlerLoad(iFailState, Handle:iQuery, szError[], iErrorCode, sTemp[
 	{
 		case TQUERY_CONNECT_FAILED: 
 		{
-			log_to_file("mix_system.log", "[SQL Error] Connection failed (%i): %s", iErrorCode, szError);
+			log_to_file("mix_system_stats.log", "[SQL Error] Connection failed (%i): %s", iErrorCode, szError);
 			return 
 		}
 		case TQUERY_QUERY_FAILED:
 		{
-			log_to_file("mix_system.log", "[SQL Error] Query failed (%i): %s", iErrorCode, szError);
+			log_to_file("mix_system_stats.log", "[SQL Error] Query failed (%i): %s", iErrorCode, szError);
 			return
 		}
 	}
@@ -517,12 +521,12 @@ public HandleLoad(iFailState, Handle:iQuery, szError[], iErrorCode, sTemp[])
 	{
 		case TQUERY_CONNECT_FAILED: 
 		{
-			log_to_file("mix_system.log", "[SQL Error] Connection failed (%i): %s", iErrorCode, szError);
+			log_to_file("mix_system_stats.log", "[SQL Error] Connection failed (%i): %s", iErrorCode, szError);
 			return 
 		}
 		case TQUERY_QUERY_FAILED:
 		{
-			log_to_file("mix_system.log", "[SQL Error] Query failed (%i): %s", iErrorCode, szError);
+			log_to_file("mix_system_stats.log", "[SQL Error] Query failed (%i): %s", iErrorCode, szError);
 			return 
 		}
 	}
@@ -549,10 +553,10 @@ public QueryHandler(iFailState, Handle:iQuery, szError[], iErrorCode)
 	{
 		case TQUERY_CONNECT_FAILED: 
 		{
-			log_to_file("mix_system.log", "[SQL Error] Connection failed (%i): %s", iErrorCode, szError);		}
+			log_to_file("mix_system_stats.log", "[SQL Error] Connection failed (%i): %s", iErrorCode, szError);		}
 		case TQUERY_QUERY_FAILED:
 		{
-			log_to_file("mix_system.log", "[SQL Error] Query failed (%i): %s", iErrorCode, szError);
+			log_to_file("mix_system_stats.log", "[SQL Error] Query failed (%i): %s", iErrorCode, szError);
 		}
 	}
 }

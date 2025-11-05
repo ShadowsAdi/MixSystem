@@ -18,6 +18,7 @@ KNIFE_STARTED = ^1The Knife Round has started.
 KNIFE_STARTED_BY_YOU = ^1The Knife Round was started by ^4You^1.
 KNIFE_STARTED_BY_X = ^1The Knife Round was started by ^4%s^1.
 KNIFE_ROUND_WON_BY_X_TEAM = ^1The Knife Round was won by team ^4%s^1.
+KNIFE_ROUND_MATCH_START_IN = ^1The Match will start in ^4%d ^1seconds.
 
 CT_TEAM = CT
 TERO_TEAM = TERRORIST
@@ -141,6 +142,11 @@ RECEIVED = received
 
 MIX_NEED_STOP_TO_CHANGEMAP = Mix needs to be ^3stopped^1 to change the map.
 
+MATCHSTATE_WARM = [Warmup]
+MATCHSTATE_IN_MATCH = [CT %d - TERO %d]
+MATCHSTATE_KNIFE_ROUND = [Knife Round]
+MATCHSTATE_OVERTIME = Overtime [CT %d - TERO %d]
+
 [ro]
 YOU_DONT_HAVE_ACCESS = ^1Nu ai acces la aceasta comanda!
 
@@ -161,6 +167,7 @@ KNIFE_STARTED = ^1Runda de cutite a pornit.
 KNIFE_STARTED_BY_YOU = ^1Runda de Cutite a fost pornita de catre ^4Tine^1.
 KNIFE_STARTED_BY_X = ^1Runda de Cutite a fost pornita de catre ^4%s^1.
 KNIFE_ROUND_WON_BY_X_TEAM = ^1Runda de Cutite a fost castigata de echipa ^4%s^1.
+KNIFE_ROUND_MATCH_START_IN = ^1Meciul va incepe in ^4%d ^1secunde.
 
 CT_TEAM = CT
 TERO_TEAM = TERRORIST
@@ -284,6 +291,11 @@ RECEIVED = primit
 
 MIX_NEED_STOP_TO_CHANGEMAP = Mix-ul trebuie sa fie ^3oprit^1 pentru a putea schimba harta.
 
+MATCHSTATE_WARM = [Incalzire]
+MATCHSTATE_IN_MATCH = [CT %d - TERO %d]
+MATCHSTATE_KNIFE_ROUND = [Runda de cutite]
+MATCHSTATE_OVERTIME = Overtime [CT %d - TERO %d]
+
 [ru]
 YOU_DONT_HAVE_ACCESS = ^1Вы не имеете доступа к этой команде!
 
@@ -304,6 +316,7 @@ KNIFE_STARTED = ^1Ножевой раунд начался.
 KNIFE_STARTED_BY_YOU = ^1Ножевой раунд был начат ^4вами^1.
 KNIFE_STARTED_BY_X = ^1Ножевой раунд был начат игроком ^4%s^1.
 KNIFE_ROUND_WON_BY_X_TEAM = ^1Ножевой раунд выиграла команда ^4%s^1.
+KNIFE_ROUND_MATCH_START_IN = ^1Матч начнется через ^4%d ^1секунд.
 
 CT_TEAM = КТ
 TERO_TEAM = ТЕРРОРИСТЫ
@@ -426,3 +439,8 @@ DAMAGE = урон
 RECEIVED = принятый
 
 MIX_NEED_STOP_TO_CHANGEMAP = Чтобы иметь возможность сменить карту, игра должна быть ^3остановлена^1.
+
+MATCHSTATE_WARM = [Разминка]
+MATCHSTATE_IN_MATCH = [CT %d - TERO %d]
+MATCHSTATE_KNIFE_ROUND = [Раунд с ножом]
+MATCHSTATE_OVERTIME = Дополнительное время [CT %d - TERO %d]
