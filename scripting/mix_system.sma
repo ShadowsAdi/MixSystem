@@ -33,6 +33,7 @@
 #if defined POINTS_SYS
 #include <sqlx>
 #endif
+#include <regex>
 #include <mix_system>
 
 #define PLUGIN  "Mix System"
@@ -41,7 +42,7 @@
 #define PLUGIN  "Mix System ~ Fastcup Mode"
 #endif
 
-#define VERSION "2.18.1"
+#define VERSION "2.19.1"
 #define AUTHOR  "Shadows Adi"
 
 #define IsPlayer(%1)				((1 <= %1 <= MAX_PLAYERS) && is_user_connected(%1))
@@ -52,7 +53,6 @@ enum (+=1200)
 	TASK_WARM = 8200,
 	TASK_SET_MONEY,
 	TASK_GIVE_WEAPON,
-	TASK_REMOVE_ITEMS,
 	TASK_SWAP,
 	TASK_REVIVE,
 	TASK_CHANGE_BOOL,
@@ -63,6 +63,14 @@ enum (+=1200)
 	TASK_SPECALL,
 	TASK_LOAD,
 	TASK_COUNT_DURATION
+}
+
+enum MatchState
+{
+	MATCHSTATE_WARM = 0,
+	MATCHSTATE_IN_MATCH,
+	MATCHSTATE_KNIFE_ROUND,
+	MATCHSTATE_OVERTIME
 }
 
 new const CHAT_PREFIX[]			=		"CHAT_PREFIX"
@@ -79,6 +87,8 @@ new const OVERTIME_CFG[]		=		"OVERTIME_CONFIG"
 new const FREEZETIME[]			=		"FREEZETIME"
 new const PAUSE_TIME[]			=		"PAUSE_DURATION"
 new const TEN_REQUIRED[]		=		"START_TEN_REQUIRED"
+new const KNIFE_ROUND_DELAY[]	=		"KNIFE_ROUND_START_DELAY"
+new const DEFAULT_POINTS[]		=		"DEFAULT_START_POINTS"
 new const SHOW_COMMANDS[]		=		"SHOW_COMMANDS"
 new const START_COMMANDS[]		=		"START_MIX_COMMANDS"
 new const STOP_COMMANDS[]		=		"STOP_MIX_COMMANDS"
@@ -167,6 +177,8 @@ enum _:Settings
 	szOvertimeCfg[32],
 	iPauseTime,
 	bool:bRequireTen,
+	iKnifeStartDelay,
+	iStartPoints,
 	#if defined POINTS_SYS
 	szStopCfg[32],
 	szHostname[48],
@@ -272,7 +284,7 @@ enum
 
 enum _:Pdata
 {
-	NAME[MAX_NAME_LENGTH],
+	STEAMID[32],
 	KILLS,
 	DEATHS,
 	MONEY
@@ -436,6 +448,8 @@ new g_iDuration
 
 new g_iRet
 
+new Regex:g_rePattern
+
 public plugin_init()
 {
 	register_plugin(PLUGIN, VERSION, AUTHOR)
@@ -453,6 +467,7 @@ public plugin_init()
 	RegisterHookChain(RG_CWeaponBox_SetModel, "RG_Weapon_Remove")
 	RegisterHookChain(RG_HandleMenu_ChooseTeam, "RG_ChooseTeam_Pre")
 	RegisterHookChain(RG_HandleMenu_ChooseTeam, "RG_ChooseTeam_Post", 1)
+	RegisterHookChain(RG_CSGameRules_CanHavePlayerItem, "RG_CSGameRules_CanHavePlayerItem_Pre")
 
 	#if defined POINTS_SYS
 	RegisterHookChain(RG_PlantBomb, "RG_BombPlanted")
@@ -499,6 +514,8 @@ public plugin_init()
 	{
 		hook_cvar_change(pcvar, "OnCvarChange")
 	}
+
+	g_rePattern = regex_compile_ex("<.*?>",PCRE_CASELESS|PCRE_DOTALL|PCRE_EXTENDED|PCRE_UTF8)
 
 	set_task(0.1, "task_read_config")
 }
@@ -736,6 +753,14 @@ ReadConfig()
 						{
 							g_ePluginSettings[bRequireTen] = bool:str_to_num(szValue)
 						}
+						else if (equal(szString, KNIFE_ROUND_DELAY))
+						{
+							g_ePluginSettings[iKnifeStartDelay] = str_to_num(szValue)
+						}
+						else if (equal(szString, DEFAULT_POINTS))
+						{
+							g_ePluginSettings[iStartPoints] = str_to_num(szValue)
+						}
 					}
 				}
 				case COMMANDS_SECTION:
@@ -916,6 +941,9 @@ ReadConfig()
 				}
 				case WARM_SETTINGS:
 				{
+					if(szData[0] == '[')
+						continue
+
 					strtok2(szData, szString, charsmax(szString), szValue, charsmax(szValue), '=', TRIM_INNER)
 
 					if(equal(szString, WARM_TYPE))
@@ -945,6 +973,9 @@ ReadConfig()
 				}
 				case HUD_SETTINGS:
 				{
+					if(szData[0] == '[')
+						continue
+
 					strtok2(szData, szString, charsmax(szString), szValue, charsmax(szValue), '=', TRIM_INNER)
 
 					if(equal(szString, HUD_COLORS))
@@ -976,6 +1007,9 @@ ReadConfig()
 				}
 				case DEMO_SETTINGS:
 				{
+					if(szData[0] == '[')
+						continue
+
 					strtok2(szData, szString, charsmax(szString), szValue, charsmax(szValue), '=', TRIM_INNER)
 
 					if(equal(szString, DEMO_AUTO))
@@ -994,6 +1028,9 @@ ReadConfig()
 				#if defined POINTS_SYS
 				case POINTS_SYSTEM:
 				{
+					if(szData[0] == '[')
+						continue
+
 					strtok2(szData, szString, charsmax(szString), szValue, charsmax(szValue), '=', TRIM_INNER)
 					if(equal(szString, DBASE_HOST))
 					{
@@ -1094,6 +1131,9 @@ ReadConfig()
 				}
 				case RANK_SYSTEM:
 				{
+					if(szData[0] == '[')
+						continue
+						
 					strtok2(szData, szString, charsmax(szString), szValue, charsmax(szValue), '=', TRIM_INNER)
 					copy(aRank[szRank], charsmax(aRank[szRank]), szString)
 					aRank[iRankPoints] = str_to_num(szValue)
@@ -1131,7 +1171,7 @@ public DatabaseConnect()
 
 	ExecuteForward(g_eForwards[DatabaseConnected], g_iRet, g_hSqlTuple, g_iSqlConnection)
 
-	new szQueryData[380];
+	new szQueryData[450];
 	formatex(szQueryData, charsmax(szQueryData), "CREATE TABLE IF NOT EXISTS `%s` \
 		(`ID` INT NOT NULL AUTO_INCREMENT,\
 		`SteamID` VARCHAR(32),\
@@ -1142,9 +1182,10 @@ public DatabaseConnect()
 		`Wins` INT NOT NULL, \
 		`Lose` INT NOT NULL, \
 		`Online` TINYINT(1) NOT NULL DEFAULT ^"0^", \
+		`updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(), \
 		PRIMARY KEY(ID, SteamID));", g_ePluginSettings[szTable])
 
-	SQL_ThreadQuery(g_hSqlTuple, "QueryHandlerTable", szQueryData)
+	SQL_ThreadQuery(g_hSqlTuple, "QueryHandlerTable", szQueryData, szQueryData, charsmax(szQueryData))
 }
 
 public QueryHandlerTable(iFailState, Handle:iQuery, szError[], iErrorCode, szQuery[])
@@ -1164,22 +1205,22 @@ public QueryHandlerTable(iFailState, Handle:iQuery, szError[], iErrorCode, szQue
 }
 #endif
 
-public client_authorized(id, const authid[])
+public client_putinserver(id)
 {
-	copy(g_szAuthID[id], charsmax(g_szAuthID[]), authid)
+	get_user_authid(id, g_szAuthID[id], charsmax(g_szAuthID[]))
 	get_user_name(id, g_szName[id], charsmax(g_szName[]))
 
 	#if defined POINTS_SYS
-	g_iPoints[id] = 0
+	g_bLoadedPlayer[id] = false
+	g_iPoints[id] = g_ePluginSettings[iStartPoints]
 	g_iKills[id] = 0
 	g_iDeaths[id] = 0
 	g_iWins[id] = 0
 	g_iLose[id] = 0
-	g_bLoadedPlayer[id] = false
 
 	if(!is_bot(id) && g_bConnected)
 	{
-		set_task(0.1, "task_load", id + TASK_LOAD)
+		set_task(0.2, "task_load", id + TASK_LOAD)
 	}
 	#endif
 	g_iPlayerKills[id] = 0
@@ -1204,19 +1245,10 @@ public client_disconnected(id)
 	if(is_bot(id))
 		return
 
-	#if defined POINTS_SYS
-	if(g_bConnected && g_bLoadedPlayer[id])
-	{
-		SaveData(id, true)
-	}
-
-	set_user_info(id, name, g_szName[id])
-	#endif
-
-	if(g_eBooleans[bIsMixOn])
+	if(g_eBooleans[bIsMixOn] && !is_nullent(id))
 	{
 		new iData[Pdata]
-		iData[NAME] = g_szName[id]
+		iData[STEAMID] = g_szAuthID[id]
 		iData[DEATHS] = get_user_deaths(id)
 		iData[KILLS] = get_user_frags(id)
 		iData[MONEY] = get_member(id, m_iAccount)
@@ -1225,6 +1257,15 @@ public client_disconnected(id)
 		g_ePlayerScore[id][iKILLS] = 0
 		g_ePlayerScore[id][iDEATHS] = 0
 	}
+
+	#if defined POINTS_SYS
+	if(g_bConnected)
+	{
+		SaveData(id, true)
+	}
+
+	set_user_info(id, name, g_szName[id])
+	#endif
 }
 
 #if defined PUNCH_ANGLE
@@ -1250,6 +1291,17 @@ public RG_Weapon_Remove(iEnt, const szModelName[])
 	}
 
 	return HC_CONTINUE
+}
+
+public RG_CSGameRules_CanHavePlayerItem_Pre(id, item)
+{
+	if(g_eBooleans[bIsKnife])
+	{
+		if(get_member(item, m_iId) == WEAPON_KNIFE)
+			return
+
+		SetHookChainReturn(ATYPE_INTEGER, 0)
+	}
 }
 
 public RG_ChooseTeam_Pre(id, MenuChooseTeam:slot)
@@ -1288,14 +1340,14 @@ public RG_ChooseTeam_Post(id, MenuChooseTeam:slot)
 	if(g_eBooleans[bIsMixOn])
 	{
 		new iData[Pdata]
-		new pID = ArrayFindString(g_aPlayerData, g_szName[id])
+		new pID = ArrayFindString(g_aPlayerData, g_szAuthID[id])
 
 		if(pID != -1)
 		{
 			ArrayGetArray(g_aPlayerData, pID, iData)
 			set_user_frags(id, iData[KILLS])
-			cs_set_user_deaths(id, iData[DEATHS])
-			cs_set_user_money(id, iData[MONEY])
+			cs_set_user_deaths(id, iData[DEATHS], true)
+			set_member(id, m_iAccount, iData[MONEY])
 
 			ArrayDeleteItem(g_aPlayerData, pID)
 		}
@@ -1363,7 +1415,7 @@ public RG_Player_Killed_Post(iVictim, iKiller, iInflictor)
 		{
 			#if defined POINTS_SYS
 			g_iPoints[iKiller] -= g_ePointSystem[PointsSubSuicide]
-			client_print_color(iVictim, print_chat, "^4%s ^1%L", g_ePluginSettings[szPrefix], LANG_PLAYER, "KILLER_KILLED_SUICIDE", g_ePointSystem[ PointsSubSuicide ])
+			client_print_color(iVictim, iVictim, "^4%s ^1%L", g_ePluginSettings[szPrefix], LANG_PLAYER, "KILLER_KILLED_SUICIDE", g_ePointSystem[ PointsSubSuicide ])
 			#endif
 			goto _return
 		}
@@ -1385,33 +1437,33 @@ public RG_Player_Killed_Post(iVictim, iKiller, iInflictor)
 		if(get_user_team(iKiller) == get_user_team(iVictim))
 		{
 			g_iPoints[ iKiller ] -= g_ePointSystem[PointsSubTK]
-			client_print_color(iKiller, print_chat, "^4%s ^1%L", g_ePluginSettings[szPrefix], LANG_PLAYER, bHeadshot ? ((wid == WEAPON_KNIFE) ? "VICTIM_KILLED_SUB_TK_KNIFE_HS" : "VICTIM_KILLED_SUB_TK_HS") : ((wid == WEAPON_KNIFE) ? "VICTIM_KILLED_SUB_TK_KNIFE" : "VICTIM_KILLED_SUB_TK"), g_ePointSystem[PointsSubTK], g_szName[iVictim])
+			client_print_color(iKiller, iKiller, "^4%s ^1%L", g_ePluginSettings[szPrefix], LANG_PLAYER, bHeadshot ? ((wid == WEAPON_KNIFE) ? "VICTIM_KILLED_SUB_TK_KNIFE_HS" : "VICTIM_KILLED_SUB_TK_HS") : ((wid == WEAPON_KNIFE) ? "VICTIM_KILLED_SUB_TK_KNIFE" : "VICTIM_KILLED_SUB_TK"), g_ePointSystem[PointsSubTK], g_szName[iVictim])
 			goto _return
 		}
 
 		if(wid == WEAPON_HEGRENADE)
 		{
 			g_iPoints[iKiller] += g_ePointSystem[PointsAddGrenade]
-			client_print_color(iKiller, print_chat, "^4%s ^1%L", g_ePluginSettings[szPrefix], LANG_PLAYER, "KILLER_KILLED_ADD_GRENADE", g_ePointSystem[PointsAddGrenade], g_szName[iVictim])
+			client_print_color(iKiller, iKiller, "^4%s ^1%L", g_ePluginSettings[szPrefix], LANG_PLAYER, "KILLER_KILLED_ADD_GRENADE", g_ePointSystem[PointsAddGrenade], g_szName[iVictim])
 			
 			g_iPoints[iVictim] -= g_ePointSystem[PointsSubGrenade]
-			client_print_color(iVictim, print_chat, "^4%s ^1%L", g_ePluginSettings[szPrefix], LANG_PLAYER, "KILLER_KILLED_SUB_GRENADE", g_ePointSystem[PointsAddGrenade], g_szName[iKiller])
+			client_print_color(iVictim, iVictim, "^4%s ^1%L", g_ePluginSettings[szPrefix], LANG_PLAYER, "KILLER_KILLED_SUB_GRENADE", g_ePointSystem[PointsAddGrenade], g_szName[iKiller])
 		}
 		else if(wid == WEAPON_KNIFE)
 		{
 			g_iPoints[iKiller] += bHeadshot ? g_ePointSystem[PointsAddKnifeHS] : g_ePointSystem[PointsAddKnife]
-			client_print_color(iKiller, print_chat, "^4%s ^1%L", g_ePluginSettings[szPrefix], LANG_PLAYER, bHeadshot ? "KILLER_KILLED_ADD_KNIFE_HS" : "KILLER_KILLED_ADD_KNIFE", bHeadshot ? g_ePointSystem[PointsAddKnifeHS] : g_ePointSystem[PointsAddKnife], g_szName[iVictim])
+			client_print_color(iKiller, iKiller, "^4%s ^1%L", g_ePluginSettings[szPrefix], LANG_PLAYER, bHeadshot ? "KILLER_KILLED_ADD_KNIFE_HS" : "KILLER_KILLED_ADD_KNIFE", bHeadshot ? g_ePointSystem[PointsAddKnifeHS] : g_ePointSystem[PointsAddKnife], g_szName[iVictim])
 
 			g_iPoints[iVictim] -= bHeadshot ? g_ePointSystem[PointsSubKnifeHS] : g_ePointSystem[PointsSubKnife]
-			client_print_color(iVictim, print_chat, "^4%s ^1%L", g_ePluginSettings[szPrefix], LANG_PLAYER, bHeadshot ? "VICTIM_KILLED_SUB_KNIFE_HS" : "VICTIM_KILLED_SUB_KNIFE", bHeadshot ? g_ePointSystem[PointsSubKnifeHS] : g_ePointSystem[PointsSubKnife], g_szName[iKiller])
+			client_print_color(iVictim, iVictim, "^4%s ^1%L", g_ePluginSettings[szPrefix], LANG_PLAYER, bHeadshot ? "VICTIM_KILLED_SUB_KNIFE_HS" : "VICTIM_KILLED_SUB_KNIFE", bHeadshot ? g_ePointSystem[PointsSubKnifeHS] : g_ePointSystem[PointsSubKnife], g_szName[iKiller])
 		}
 		else
 		{
 			g_iPoints[iKiller] += bHeadshot ? g_ePointSystem[PointsAddHS] : g_ePointSystem[PointsAdd]
-			client_print_color(iKiller, print_chat, "^4%s ^1%L", g_ePluginSettings[szPrefix], LANG_PLAYER, bHeadshot ? "KILLER_KILLED_ADD_HS" : "KILLER_KILLED_ADD", bHeadshot ? g_ePointSystem[PointsAddHS] : g_ePointSystem[PointsAdd], g_szName[iVictim])
+			client_print_color(iKiller, iKiller, "^4%s ^1%L", g_ePluginSettings[szPrefix], LANG_PLAYER, bHeadshot ? "KILLER_KILLED_ADD_HS" : "KILLER_KILLED_ADD", bHeadshot ? g_ePointSystem[PointsAddHS] : g_ePointSystem[PointsAdd], g_szName[iVictim])
 			
 			g_iPoints[iVictim] -= bHeadshot ? g_ePointSystem[PointsSubHS] : g_ePointSystem[PointsSub]
-			client_print_color(iVictim, print_chat, "^4%s ^1%L", g_ePluginSettings[szPrefix], LANG_PLAYER, bHeadshot ? "VICTIM_KILLED_SUB_HS" : "VICTIM_KILLED_SUB", bHeadshot ? g_ePointSystem[PointsSubHS] : g_ePointSystem[PointsSub], g_szName[iKiller])
+			client_print_color(iVictim, iVictim, "^4%s ^1%L", g_ePluginSettings[szPrefix], LANG_PLAYER, bHeadshot ? "VICTIM_KILLED_SUB_HS" : "VICTIM_KILLED_SUB", bHeadshot ? g_ePointSystem[PointsSubHS] : g_ePointSystem[PointsSub], g_szName[iKiller])
 		}
 		g_iKills[iKiller] += 1
 		g_iDeaths[iVictim] += 1
@@ -1464,7 +1516,7 @@ public RG_BombPlanted(id)
 	{
 		g_iBombPlanter = id
 		g_iPoints[ id ] += g_ePointSystem[ PointsPlanted ]
-		client_print_color( id, print_chat, "^4%s ^1%L", g_ePluginSettings[szPrefix], LANG_PLAYER, "POINTS_FOR_PLANT_BOMB", g_ePointSystem[ PointsPlanted ] )
+		client_print_color( id, id, "^4%s ^1%L", g_ePluginSettings[szPrefix], LANG_PLAYER, "POINTS_FOR_PLANT_BOMB", g_ePointSystem[ PointsPlanted ] )
 	}
 }
 
@@ -1473,7 +1525,7 @@ public RG_BombExploded()
 	if(g_eBooleans[bIsMixOn])
 	{
 		g_iPoints[ g_iBombPlanter ] += g_ePointSystem[ PointsExploded ]
-		client_print_color(g_iBombPlanter, print_chat, "^4%s^1 %L", g_ePluginSettings[szPrefix], LANG_SERVER, "BOMB_EXPLODED_BY_YOU", g_ePointSystem[PointsExploded])
+		client_print_color(g_iBombPlanter, g_iBombPlanter, "^4%s^1 %L", g_ePluginSettings[szPrefix], LANG_SERVER, "BOMB_EXPLODED_BY_YOU", g_ePointSystem[PointsExploded])
 	}
 }
 
@@ -1484,7 +1536,7 @@ public RG_BombDefused(id2, id, bool:bDefused)
 		if(bDefused)
 		{
 			g_iPoints[id] += g_ePointSystem[ PointsDefused ]
-			client_print_color(id, print_chat, "^4%s^1 %L", g_ePluginSettings[szPrefix], LANG_SERVER, "BOMB_DEFUSED_BY_YOU", g_ePointSystem[PointsDefused])
+			client_print_color(id, id, "^4%s^1 %L", g_ePluginSettings[szPrefix], LANG_SERVER, "BOMB_DEFUSED_BY_YOU", g_ePointSystem[PointsDefused])
 		}
 	}
 }
@@ -1504,14 +1556,27 @@ public RG_Player_Spawn_Post(id)
 		{
 			ArrayGetArray(g_aRanks, i, aRank)
 
-			if(aRank[iRankPoints] > g_iPoints[id])
+			if(g_iPoints[id] <= aRank[iRankPoints])
 			{
+				if(i > 1)
+				{
+					ArrayGetArray(g_aRanks, i-1, aRank)
+				}
 				break
 			}
+		}
+		
+		new iError
+		regex_replace(g_rePattern, g_szName[id], charsmax(g_szName[]), "", .errcode=iError)
+
+		if(iError != 0)
+		{
+			log_to_file("mix_system.log", "Regex Error. Code %d", iError)
 		}
 
 		new tmpName[32]
 		formatex(tmpName, charsmax(tmpName), "%s", g_szName[id])
+
 		if(g_ePointSystem[PointsShowName])
 		{
 			format(tmpName, charsmax(tmpName), "%s <%d>", tmpName, g_iPoints[id])
@@ -1529,7 +1594,7 @@ public clcmd_showcmds(id)
 {
 	if(!(get_user_flags(id) & read_flags(g_ePluginSettings[szAdminAccess])))
 	{
-		client_print_color(id, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "YOU_DONT_HAVE_ACCESS")
+		client_print_color(id, id, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "YOU_DONT_HAVE_ACCESS")
 		return PLUGIN_HANDLED
 	}
 
@@ -1568,7 +1633,7 @@ public clcmd_showcmds(id)
 		console_print(id, "=-=-==-=-=---=-=-==-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
 	}
 
-	client_print_color(id, print_chat, "^4%s ^1%L", g_ePluginSettings[szPrefix], LANG_SERVER, "OPEN_CONSOLE_FOR_CMDS")
+	client_print_color(id, id, "^4%s ^1%L", g_ePluginSettings[szPrefix], LANG_SERVER, "OPEN_CONSOLE_FOR_CMDS")
 	client_cmd(id, "toggleconsole")
 
 	return PLUGIN_HANDLED
@@ -1590,13 +1655,13 @@ public clcmd_startmix(id, bool:bKnife)
 {
 	if(!(get_user_flags(id) & read_flags(g_ePluginSettings[szAdminAccess])))
 	{
-		client_print_color(id, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "YOU_DONT_HAVE_ACCESS")
+		client_print_color(id, id, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "YOU_DONT_HAVE_ACCESS")
 		return PLUGIN_HANDLED
 	}
 
 	if(g_eBooleans[bIsMixOn])
 	{
-		client_print_color(id, print_center, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_ALREADY_STARTED")
+		client_print_color(id, id, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_ALREADY_STARTED")
 		return PLUGIN_HANDLED
 	}
 
@@ -1610,7 +1675,7 @@ public clcmd_startmix(id, bool:bKnife)
 
 		if(iTemp[6] < 10)
 		{
-			client_print_color(id, print_center, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_NEEDS_TEN_PLAYERS")
+			client_print_color(id, id, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_NEEDS_TEN_PLAYERS")
 			return PLUGIN_HANDLED
 		}
 	}
@@ -1646,11 +1711,11 @@ public clcmd_startmix(id, bool:bKnife)
 		#endif
 			if(g_eInformations[MIX_STARTER] == iPlayer)
 			{
-				client_print_color(iPlayer, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_PLAYER, "MIX_STARTED_BY_YOU")
+				client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_PLAYER, "MIX_STARTED_BY_YOU")
 			}
 			else
 			{
-				client_print_color(iPlayer, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_STARTED_BY_X", g_szName[g_eInformations[MIX_STARTER]])
+				client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_STARTED_BY_X", g_szName[g_eInformations[MIX_STARTER]])
 			}
 
 			if(g_eDemoSettings[iDemoAuto])
@@ -1666,7 +1731,7 @@ public clcmd_startmix(id, bool:bKnife)
 						client_cmd(iPlayer, "record ^"%s_%s^"", g_eDemoSettings[szDemoName], szMapName)
 					}
 				}
-				client_print_color(iPlayer, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_PLAYER, "DEMO_STARTED_ON_YOU")
+				client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_PLAYER, "DEMO_STARTED_ON_YOU")
 			}
 			
 			iTeam = cs_get_user_team(iPlayer)
@@ -1731,17 +1796,17 @@ public clcmd_stopmix(id)
 {
 	if(!(get_user_flags(id) & read_flags(g_ePluginSettings[szAdminAccess])))
 	{
-		client_print_color(id, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "YOU_DONT_HAVE_ACCESS")
+		client_print_color(id, id, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "YOU_DONT_HAVE_ACCESS")
 		return PLUGIN_HANDLED
 	}
 
 	#if defined DEBUG
-	client_print_color(0, print_chat, "clcmd_stopmix() called")
+	client_print_color(0, 0, "clcmd_stopmix() called")
 	#endif
 
 	if(!g_eBooleans[bIsMixOn])
 	{
-		client_print_color(id, print_center, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_NOT_STARTED_YET")
+		client_print_color(id, id, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_NOT_STARTED_YET")
 		return PLUGIN_HANDLED
 	}
 
@@ -1760,11 +1825,11 @@ public clcmd_stopmix(id)
 
 		if(g_eInformations[MIX_STOPER] == iPlayer)
 		{
-			client_print_color(iPlayer, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_PLAYER, "MIX_STOPPED_BY_YOU")
+			client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_PLAYER, "MIX_STOPPED_BY_YOU")
 		}
 		else
 		{
-			client_print_color(iPlayer, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_STOPPED_BY_X", g_szName[g_eInformations[MIX_STOPER]])
+			client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_STOPPED_BY_X", g_szName[g_eInformations[MIX_STOPER]])
 		}
 
 		iTeam = cs_get_user_team(iPlayer)
@@ -1801,13 +1866,13 @@ public clcmd_warm(id)
 {
 	if(!(get_user_flags(id) & read_flags(g_ePluginSettings[szAdminAccess])))
 	{
-		client_print_color(id, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "YOU_DONT_HAVE_ACCESS")
+		client_print_color(id, id, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "YOU_DONT_HAVE_ACCESS")
 		return PLUGIN_HANDLED
 	}
 
 	if(g_eBooleans[bIsMixOn] || g_eBooleans[bIsKnife])
 	{
-		client_print_color(id, print_center, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_NEED_STOPPED")
+		client_print_color(id, id, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_NEED_STOPPED")
 		return PLUGIN_HANDLED
 	}
 
@@ -1822,11 +1887,11 @@ public clcmd_warm(id)
 
 		if(g_eInformations[WARM_CALLER] == iPlayer)
 		{
-			client_print_color(iPlayer, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_PLAYER, "WARM_STARTED_BY_YOU")
+			client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_PLAYER, "WARM_STARTED_BY_YOU")
 		}
 		else
 		{
-			client_print_color(iPlayer, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "WARM_STARTED_BY_X", g_szName[g_eInformations[WARM_CALLER]])
+			client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "WARM_STARTED_BY_X", g_szName[g_eInformations[WARM_CALLER]])
 		}
 
 		set_task(2.0, "Task_Warmup", iPlayer + TASK_WARM)
@@ -1843,6 +1908,8 @@ public clcmd_warm(id)
 	server_cmd("mp_buytime 99999")
 
 	server_cmd("sv_restart 1")
+
+	SetGameDesc(MATCHSTATE_WARM)
 
 	return PLUGIN_CONTINUE
 }
@@ -1882,7 +1949,7 @@ public task_set_money(id)
 	rg_add_account(id, g_eWarmSettings[iWarmMoney], AS_ADD, true)
 
 	#if defined DEBUG
-	client_print_color(id, print_chat, "task_set_money() called")
+	client_print_color(id, id, "task_set_money() called")
 	#endif
 
 	return PLUGIN_CONTINUE
@@ -1923,7 +1990,7 @@ public task_give_weapon(id)
 	}
 	
 	#if defined DEBUG
-	client_print_color(id, print_chat, "task_give_weapon() called")
+	client_print_color(id, id, "task_give_weapon() called")
 	#endif
 
 	return PLUGIN_HANDLED
@@ -1933,13 +2000,13 @@ public clcmd_knife(id)
 {
 	if(!(get_user_flags(id) & read_flags(g_ePluginSettings[szAdminAccess])))
 	{
-		client_print_color(id, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "YOU_DONT_HAVE_ACCESS")
+		client_print_color(id, id, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "YOU_DONT_HAVE_ACCESS")
 		return PLUGIN_HANDLED
 	}
 
 	if(g_eBooleans[bIsMixOn])
 	{
-		client_print_color(id, print_center, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_NEED_STOPPED")
+		client_print_color(id, id, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_NEED_STOPPED")
 		return PLUGIN_HANDLED
 	}
 
@@ -1955,17 +2022,15 @@ public clcmd_knife(id)
 		#if !defined FASTCUP_MODE
 		if(g_eInformations[KNIFE_STRATER] == iPlayer)
 		{
-			client_print_color(iPlayer, print_center, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "KNIFE_STARTED_BY_YOU")
+			client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "KNIFE_STARTED_BY_YOU")
 		}
 		else
 		{
-			client_print_color(iPlayer, print_center, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "KNIFE_STARTED_BY_X", g_szName[g_eInformations[KNIFE_STRATER]])
+			client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "KNIFE_STARTED_BY_X", g_szName[g_eInformations[KNIFE_STRATER]])
 		}
 		#else
-		client_print_color(iPlayer, print_center, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "KNIFE_STARTED")
+		client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "KNIFE_STARTED")
 		#endif
-
-		set_task(3.0, "task_remove_items", iPlayer + TASK_REMOVE_ITEMS)
 	}
 
 	g_iKnifes = 0
@@ -1980,22 +2045,7 @@ public clcmd_knife(id)
 
 	server_cmd("sv_restart 1")
 
-	return PLUGIN_CONTINUE
-}
-
-public task_remove_items(iPlayer)
-{
-	iPlayer -= TASK_REMOVE_ITEMS
-
-	if(!IsPlayer(iPlayer) || !is_user_alive(iPlayer) || !g_eBooleans[bIsKnife])
-	{
-		return PLUGIN_HANDLED
-	}
-
-	rg_remove_items_by_slot(iPlayer, PRIMARY_WEAPON_SLOT)
-	rg_remove_items_by_slot(iPlayer, PISTOL_SLOT)
-	rg_remove_items_by_slot(iPlayer, GRENADE_SLOT)
-	rg_remove_items_by_slot(iPlayer, C4_SLOT)
+	SetGameDesc(MATCHSTATE_KNIFE_ROUND)
 
 	return PLUGIN_CONTINUE
 }
@@ -2063,6 +2113,9 @@ public task_end_round(index)
 		}
 	}
 
+	if(g_eBooleans[bIsMixOn])
+		SetGameDesc(g_eBooleans[bOvertime] ? MATCHSTATE_OVERTIME : MATCHSTATE_IN_MATCH)
+
 	if(g_iKnifes == 2)
 	{
 		if(g_eBooleans[bIsKnife] && !g_eBooleans[bIsStoppingMix])
@@ -2074,7 +2127,8 @@ public task_end_round(index)
 			{
 				iPlayer = iPlayers[i]
 
-				client_print_color(iPlayer, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "KNIFE_ROUND_WON_BY_X_TEAM", szTeamWon)
+				client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "KNIFE_ROUND_WON_BY_X_TEAM", szTeamWon)
+				client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "KNIFE_ROUND_MATCH_START_IN", g_ePluginSettings[iKnifeStartDelay])
 				
 				#if defined FASTCUP_MODE
 				if(get_member(iPlayer, m_iTeam) == iWTeam)
@@ -2088,7 +2142,7 @@ public task_end_round(index)
 #if defined FASTCUP_MODE
 			if(!task_exists(TASK_CHECKVOTES))
 			{
-				set_task(10.0, "task_do_change", TASK_CHECKVOTES)
+				set_task(float(g_ePluginSettings[iKnifeStartDelay]), "task_do_change", TASK_CHECKVOTES)
 			}
 #endif
 			g_eBooleans[bIsKnife] = false
@@ -2116,9 +2170,9 @@ public task_end_round(index)
 			}
 
 			#if defined OVERTIME_ONE_ROUND
-			client_print_color(iPlayer, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "OVERTIME_AUTOMATIC_WILL_START_ONER")
+			client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "OVERTIME_AUTOMATIC_WILL_START_ONER")
 			#else
-			client_print_color(iPlayer, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "OVERTIME_AUTOMATIC_WILL_START")
+			client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "OVERTIME_AUTOMATIC_WILL_START")
 			#endif
 		}
 
@@ -2184,7 +2238,7 @@ public task_end_round(index)
 							iHitsGiven = g_ePlayerStats[iPlayer][iVictim][HitsGiven]
 							iHitsTaken = g_ePlayerStats[iVictim][iPlayer][HitsGiven]
 
-							client_print_color(iPlayer, print_chat, "^4%s ^1%s (^4%d ^1%L^4 %d^1) %L, (^4%d^1 %L^4 %d^1) %L.", 
+							client_print_color(iPlayer, iPlayer, "^4%s ^1%s (^4%d ^1%L^4 %d^1) %L, (^4%d^1 %L^4 %d^1) %L.", 
 							                   g_ePluginSettings[szPrefix], g_szName[iVictim], iDamageGiven, LANG_PLAYER, "IN",
 							                    iHitsGiven, LANG_PLAYER, "DAMAGE", iDamageTaken, LANG_PLAYER, "IN", iHitsTaken, LANG_PLAYER, "RECEIVED")
 						}
@@ -2212,15 +2266,15 @@ public task_end_round(index)
 				if(g_eInformations[ACE] == iPlayer)
 				{
 					#if defined POINTS_SYS
-					client_print_color(iPlayer, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "YOU_SCORED_ACE_POINTS", g_ePointSystem[PointsAce])
+					client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "YOU_SCORED_ACE_POINTS", g_ePointSystem[PointsAce])
 					g_iPoints[iPlayer] += g_ePointSystem[PointsAce]
 					#else
-					client_print_color(iPlayer, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "YOU_SCORED_ACE")
+					client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "YOU_SCORED_ACE")
 					#endif
 				}
 				else
 				{
-					client_print_color(iPlayer, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "X_SCORED_ACE", g_szName[g_eInformations[ACE]])
+					client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "X_SCORED_ACE", g_szName[g_eInformations[ACE]])
 				}
 
 				client_cmd(iPlayer, "spk vox/buzwarn")
@@ -2231,15 +2285,15 @@ public task_end_round(index)
 				if(g_eInformations[SEMI_ACE] == iPlayer)
 				{
 					#if defined POINTS_SYS
-					client_print_color(iPlayer, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "YOU_SCORED_SEMIACE_POINTS", g_ePointSystem[PointsAce])
+					client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "YOU_SCORED_SEMIACE_POINTS", g_ePointSystem[PointsAce])
 					g_iPoints[iPlayer] += g_ePointSystem[PointsSemiAce]
 					#else
-					client_print_color(iPlayer, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "YOU_SCORED_SEMIACE")
+					client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "YOU_SCORED_SEMIACE")
 					#endif
 				}
 				else
 				{
-					client_print_color(iPlayer, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "X_SCORED_SEMIACE", g_szName[g_eInformations[SEMI_ACE]])
+					client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "X_SCORED_SEMIACE", g_szName[g_eInformations[SEMI_ACE]])
 				}
 				client_cmd(iPlayer, "spk vox/buzwarn")
 			}
@@ -2332,13 +2386,15 @@ public CheckVotes(any:iAnswer[])
 	{
 		g_iVote = 1
 	}
-
-	if(iAnswer[SWITCH] < iAnswer[STAY])
+	else if(iAnswer[SWITCH] < iAnswer[STAY])
 	{
 		g_iVote = 0
 	}
-
-	if(iAnswer[SWITCH] == iAnswer[STAY])
+	else if(iAnswer[SWITCH] == iAnswer[STAY])
+	{
+		g_iVote = 0
+	}
+	else 
 	{
 		g_iVote = 0
 	}
@@ -2364,12 +2420,9 @@ public task_do_change(iTaskID)
 
 	client_print_color(0, 0, "^4%s %L %s", g_ePluginSettings[szPrefix], LANG_SERVER, "TEAM_VOTED", szTemp)
 
-	switch(g_iVote)
+	if(g_iVote) 
 	{
-		case 1:
-		{
-			rg_swap_all_players()
-		}
+		rg_swap_all_players()
 	}
 
 	g_eBooleans[bCanShowStats] = false
@@ -2434,17 +2487,17 @@ public clcmd_chat_on(id)
 {
 	if(!(get_user_flags(id) & read_flags(g_ePluginSettings[szAdminAccess])))
 	{
-		client_print_color(id, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "YOU_DONT_HAVE_ACCESS")
+		client_print_color(id, id, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "YOU_DONT_HAVE_ACCESS")
 		return PLUGIN_HANDLED
 	}
 
 	#if defined DEBUG
-	client_print_color(0, print_chat, "clcmd_chat() called")
+	client_print_color(0, 0, "clcmd_chat() called")
 	#endif
 
 	if(!g_eBooleans[bIsMixOn])
 	{
-		client_print_color(id, print_center, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_NOT_STARTED_YET")
+		client_print_color(id, id, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_NOT_STARTED_YET")
 		return PLUGIN_HANDLED
 	}
 
@@ -2459,11 +2512,11 @@ public clcmd_chat_on(id)
 
 		if(g_eInformations[CHAT] == iPlayer)
 		{
-			client_print_color(iPlayer, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "CHAT_OPENED_BY_YOU")
+			client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "CHAT_OPENED_BY_YOU")
 		}
 		else
 		{
-			client_print_color(iPlayer, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "CHAT_OPENED_BY_X", g_szName[g_eInformations[CHAT]])
+			client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "CHAT_OPENED_BY_X", g_szName[g_eInformations[CHAT]])
 		}
 
 		g_eBooleans[bCanChat][iPlayer] = true
@@ -2476,17 +2529,17 @@ public clcmd_chat_off(id)
 {
 	if(!(get_user_flags(id) & read_flags(g_ePluginSettings[szAdminAccess])))
 	{
-		client_print_color(id, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "YOU_DONT_HAVE_ACCESS")
+		client_print_color(id, id, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "YOU_DONT_HAVE_ACCESS")
 		return PLUGIN_HANDLED
 	}
 
 	#if defined DEBUG
-	client_print_color(0, print_chat, "clcmd_chat() called")
+	client_print_color(0, 0, "clcmd_chat() called")
 	#endif
 
 	if(!g_eBooleans[bIsMixOn])
 	{
-		client_print_color(id, print_center, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_NOT_STARTED_YET")
+		client_print_color(id, id, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_NOT_STARTED_YET")
 		return PLUGIN_HANDLED
 	}
 
@@ -2501,11 +2554,11 @@ public clcmd_chat_off(id)
 
 		if(g_eInformations[CHAT] == iPlayer)
 		{
-			client_print_color(iPlayer, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "CHAT_CLOSED_BY_YOU")
+			client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "CHAT_CLOSED_BY_YOU")
 		}
 		else
 		{
-			client_print_color(iPlayer, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "CHAT_CLOSED_BY_X", g_szName[g_eInformations[CHAT]])
+			client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "CHAT_CLOSED_BY_X", g_szName[g_eInformations[CHAT]])
 		}
 		
 		if(!(get_user_flags(iPlayer) & read_flags(g_ePluginSettings[szAdminFlags])))
@@ -2597,13 +2650,6 @@ public hook_say(id)
 			iPlayer = iPlayers[i]
 
 			client_print_color(iPlayer, id, szMessage)
-
-			/*
-			message_begin(MSG_ONE, get_user_msgid("SayText"), .player = iPlayer);
-			write_byte(id);
-			write_string(szMessage);
-			message_end();
-			*/
 		}
 	}
 
@@ -2635,29 +2681,29 @@ public clcmd_overtime(id)
 {
 	if(!(get_user_flags(id) & read_flags(g_ePluginSettings[szAdminAccess])))
 	{
-		client_print_color(id, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "YOU_DONT_HAVE_ACCESS")
+		client_print_color(id, id, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "YOU_DONT_HAVE_ACCESS")
 		return PLUGIN_HANDLED
 	}
 
 	#if defined DEBUG
-	client_print_color(0, print_chat, "clcmd_overtime() called")
+	client_print_color(0, 0, "clcmd_overtime() called")
 	#endif
 
 	if(!g_eBooleans[bIsMixOn])
 	{
-		client_print_color(id, print_center, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_NOT_STARTED_YET")
+		client_print_color(id, id, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_NOT_STARTED_YET")
 		return PLUGIN_HANDLED
 	}
 
 	if(!CanOvertime())
 	{
-		client_print_color(id, print_chat, "^4%s ^1%L", g_ePluginSettings[szPrefix], LANG_SERVER, "CANT_START_OVERTIME_YET")
+		client_print_color(id, id, "^4%s ^1%L", g_ePluginSettings[szPrefix], LANG_SERVER, "CANT_START_OVERTIME_YET")
 		return PLUGIN_HANDLED
 	}
 
 	if(g_eBooleans[bOvertime])
 	{
-		client_print_color(id, print_chat, "^4%s ^1%L", g_ePluginSettings[szPrefix], LANG_SERVER, "OVERTIME_ALREADY_STARTED")
+		client_print_color(id, id, "^4%s ^1%L", g_ePluginSettings[szPrefix], LANG_SERVER, "OVERTIME_ALREADY_STARTED")
 		return PLUGIN_HANDLED
 	}
 
@@ -2672,11 +2718,11 @@ public clcmd_overtime(id)
 
 		if(g_eInformations[OVERTIME_STARTER] == iPlayer)
 		{
-			client_print_color(iPlayer, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "OVERTIME_STARTED_BY_YOU")
+			client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "OVERTIME_STARTED_BY_YOU")
 		}
 		else
 		{
-			client_print_color(iPlayer, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "OVERTIME_STARTED_BY_X", g_szName[g_eInformations[OVERTIME_STARTER]])
+			client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "OVERTIME_STARTED_BY_X", g_szName[g_eInformations[OVERTIME_STARTER]])
 		}
 	}
 
@@ -2697,17 +2743,17 @@ public clcmd_passon(id, szMessage[180], IsSay)
 {
 	if(!(get_user_flags(id) & read_flags(g_ePluginSettings[szAdminAccess])))
 	{
-		client_print_color(id, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "YOU_DONT_HAVE_ACCESS")
+		client_print_color(id, id, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "YOU_DONT_HAVE_ACCESS")
 		return PLUGIN_HANDLED
 	}
 
 	#if defined DEBUG
-	client_print_color(0, print_chat, "clcmd_passon() called")
+	client_print_color(0, 0, "clcmd_passon() called")
 	#endif
 
 	if(!g_eBooleans[bIsMixOn])
 	{
-		client_print_color(id, print_center, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_NOT_STARTED_YET")
+		client_print_color(id, id, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_NOT_STARTED_YET")
 		return PLUGIN_HANDLED
 	}
 
@@ -2730,15 +2776,15 @@ public clcmd_passon(id, szMessage[180], IsSay)
 
 		if(g_eInformations[PASSON_CALLER] == iPlayer)
 		{
-			client_print_color(iPlayer, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "PASSWORD_SETTED_BY_YOU", szMessage)
+			client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "PASSWORD_SETTED_BY_YOU", szMessage)
 		}
 		else if((get_user_flags(id) & read_flags(g_ePluginSettings[szAdminAccess])))
 		{
-			client_print_color(iPlayer, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "PASSWORD_SETTED_BY_X_ADMIN", g_szName[g_eInformations[PASSON_CALLER]], szMessage)
+			client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "PASSWORD_SETTED_BY_X_ADMIN", g_szName[g_eInformations[PASSON_CALLER]], szMessage)
 		}
 		else
 		{
-			client_print_color(iPlayer, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "PASSWORD_SETTED_BY_X", g_szName[g_eInformations[PASSON_CALLER]])
+			client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "PASSWORD_SETTED_BY_X", g_szName[g_eInformations[PASSON_CALLER]])
 		}
 	}
 
@@ -2749,17 +2795,17 @@ public clcmd_passoff(id)
 {
 	if(!(get_user_flags(id) & read_flags(g_ePluginSettings[szAdminAccess])))
 	{
-		client_print_color(id, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "YOU_DONT_HAVE_ACCESS")
+		client_print_color(id, id, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "YOU_DONT_HAVE_ACCESS")
 		return PLUGIN_HANDLED
 	}
 
 	#if defined DEBUG
-	client_print_color(0, print_chat, "clcmd_passoff() called")
+	client_print_color(0, 0, "clcmd_passoff() called")
 	#endif
 
 	if(!g_eBooleans[bIsMixOn])
 	{
-		client_print_color(id, print_center, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_NOT_STARTED_YET")
+		client_print_color(id, id, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_NOT_STARTED_YET")
 		return PLUGIN_HANDLED
 	}
 
@@ -2776,11 +2822,11 @@ public clcmd_passoff(id)
 
 		if(g_eInformations[PASSOFF_CALLER] == iPlayer)
 		{
-			client_print_color(iPlayer, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "PASSWORD_REMOVED_BY_YOU")
+			client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "PASSWORD_REMOVED_BY_YOU")
 		}
 		else
 		{
-			client_print_color(iPlayer, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "PASSWORD_REMOVED_BY_X", g_szName[g_eInformations[PASSOFF_CALLER]])
+			client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "PASSWORD_REMOVED_BY_X", g_szName[g_eInformations[PASSOFF_CALLER]])
 		}
 	}
 
@@ -2800,11 +2846,11 @@ public task_show_score()
 		{
 			if(!g_iStart)
 			{
-				client_print_color(iPlayer, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_SCORE_IS", LANG_SERVER, "CT_TEAM", g_iScore[CT_SCORE], LANG_SERVER, "TERO_TEAM", g_iScore[TERO_SCORE])
+				client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_SCORE_IS", LANG_SERVER, "CT_TEAM", g_iScore[CT_SCORE], LANG_SERVER, "TERO_TEAM", g_iScore[TERO_SCORE])
 			}
 			else
 			{
-				client_print_color(iPlayer, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_SCORE_IS_WITH_END", LANG_SERVER, "CT_TEAM", g_iScore[CT_SCORE], LANG_SERVER, "TERO_TEAM", g_iScore[TERO_SCORE])
+				client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_SCORE_IS_WITH_END", LANG_SERVER, "CT_TEAM", g_iScore[CT_SCORE], LANG_SERVER, "TERO_TEAM", g_iScore[TERO_SCORE])
 			}
 		}
 		
@@ -2813,11 +2859,11 @@ public task_show_score()
 			set_pcvar_num(g_cFreezeTime, g_ePluginSettings[iFreezetimeSwap])
 			if(!IsPreLastRound())
 			{
-				client_print_color(iPlayer, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_HALF_SCORE", LANG_SERVER, "CT_TEAM", g_iScore[CT_SCORE], LANG_SERVER, "TERO_TEAM", g_iScore[TERO_SCORE])
+				client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_HALF_SCORE", LANG_SERVER, "CT_TEAM", g_iScore[CT_SCORE], LANG_SERVER, "TERO_TEAM", g_iScore[TERO_SCORE])
 			}
 
 			#if defined DEBUG
-			client_print_color(0, print_chat, "IsHalf() called")
+			client_print_color(0, 0, "IsHalf() called")
 			#endif
 		}
 
@@ -2826,8 +2872,8 @@ public task_show_score()
 			new szTemp[16]
 			LastRoundUntilWin(szTemp, charsmax(szTemp))
 
-			client_print_color(iPlayer, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_LAST_ROUND_FOR_X_TEAM", szTemp)
-			client_print_color(iPlayer, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_SCORE_IS_WITH_END", LANG_SERVER, "CT_TEAM", g_iScore[CT_SCORE], LANG_SERVER, "TERO_TEAM", g_iScore[TERO_SCORE])
+			client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_LAST_ROUND_FOR_X_TEAM", szTemp)
+			client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_SCORE_IS_WITH_END", LANG_SERVER, "CT_TEAM", g_iScore[CT_SCORE], LANG_SERVER, "TERO_TEAM", g_iScore[TERO_SCORE])
 		}
 
 		if(IsLastRound())
@@ -2854,8 +2900,8 @@ public task_show_score()
 			ExecuteForward(g_eForwards[GameOver], g_iRet, iPlayer, g_iDuration, szTemp[0])
 			#endif
 
-			client_print_color(iPlayer, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_WON_BY_X_TEAM", szTemp)
-			client_print_color(iPlayer, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_PLAYER, "MIX_END_SCORE", LANG_SERVER, "CT_TEAM", g_iScore[CT_SCORE], LANG_SERVER, "TERO_TEAM", g_iScore[TERO_SCORE])
+			client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_WON_BY_X_TEAM", szTemp)
+			client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_PLAYER, "MIX_END_SCORE", LANG_SERVER, "CT_TEAM", g_iScore[CT_SCORE], LANG_SERVER, "TERO_TEAM", g_iScore[TERO_SCORE])
 		
 			client_cmd(iPlayer, "stop")
 		}
@@ -2865,17 +2911,17 @@ public task_show_score()
 			#if !defined OVERTIME_ONE_ROUND
 			if(!g_eOvertime[SecondOvertime] && !g_eBooleans[bTeamSwap])
 			{
-				client_print_color(iPlayer, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "FIRST_OVERTIME_SCORE_IS", LANG_SERVER, "CT_TEAM", g_iOvertimeScore[CT_OVER_SCORE], LANG_SERVER, "TERO_TEAM", g_iOvertimeScore[TERO_OVER_SCORE])
+				client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "FIRST_OVERTIME_SCORE_IS", LANG_SERVER, "CT_TEAM", g_iOvertimeScore[CT_OVER_SCORE], LANG_SERVER, "TERO_TEAM", g_iOvertimeScore[TERO_OVER_SCORE])
 			}
 			
 			if(g_eOvertime[SecondOvertime] && g_eBooleans[bTeamSwap])
 			{
-				client_print_color(iPlayer, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "SECOND_OVERTIME_SCORE_IS", LANG_SERVER, "CT_TEAM", g_iOvertimeScore[CT_OVER_SCORE], LANG_SERVER, "TERO_TEAM", g_iOvertimeScore[TERO_OVER_SCORE])
+				client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "SECOND_OVERTIME_SCORE_IS", LANG_SERVER, "CT_TEAM", g_iOvertimeScore[CT_OVER_SCORE], LANG_SERVER, "TERO_TEAM", g_iOvertimeScore[TERO_OVER_SCORE])
 			}
 			#else
 			if(!g_eOvertime[SecondOvertime] && !g_eBooleans[bTeamSwap])
 			{
-				client_print_color(iPlayer, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "ONE_ROUND_FOR_WIN", LANG_SERVER)
+				client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "ONE_ROUND_FOR_WIN", LANG_SERVER)
 			}
 			#endif
 		}
@@ -2896,8 +2942,10 @@ public task_show_score()
 			ExecuteForward(g_eForwards[GameOver], g_iRet, iPlayer, g_iDuration, szTemp[0])
 			#endif
 
-			client_print_color(iPlayer, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_WON_BY_X_TEAM_IN_OVERTIME", szTemp)
-			client_print_color(iPlayer, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_PLAYER, "MIX_OVERTIME_END_SCORE", LANG_SERVER, "CT_TEAM", g_iOvertimeScore[CT_OVER_SCORE], LANG_SERVER, "TERO_TEAM", g_iOvertimeScore[TERO_OVER_SCORE])
+			client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_WON_BY_X_TEAM_IN_OVERTIME", szTemp)
+			client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_PLAYER, "MIX_OVERTIME_END_SCORE", LANG_SERVER, "CT_TEAM", g_iOvertimeScore[CT_OVER_SCORE], LANG_SERVER, "TERO_TEAM", g_iOvertimeScore[TERO_OVER_SCORE])
+		
+			client_cmd(iPlayer, "stop")
 		}
 
 		g_iPlayerKills[iPlayer] = 0
@@ -2921,11 +2969,6 @@ public task_show_score()
 	g_eInformations[SEMI_ACE] = -1
 
 	g_iStart = 1
-
-	new sTemp[24]
-	formatex(sTemp, charsmax(sTemp), "%sCT %d - T %d", g_eBooleans[bOvertime] ? "OVERTIME" : "", g_eBooleans[bOvertime] ? g_iOvertimeScore[CT_OVER_SCORE] : g_iScore[CT_SCORE], g_eBooleans[bOvertime] ? g_iOvertimeScore[TERO_OVER_SCORE] : g_iScore[TERO_SCORE])
-
-	set_member_game(m_GameDesc, sTemp)
 }
 
 public task_show_dhud()
@@ -2961,7 +3004,7 @@ public task_delayed_swap()
 
 	rg_swap_all_players()
 
-	server_cmd("sv_restart 1")
+	rg_round_end(1.0, WINSTATUS_NONE)
 }
 
 public task_swap_score()
@@ -2969,7 +3012,7 @@ public task_swap_score()
 	g_eBooleans[bTeamSwap] = true
 
 	#if defined DEBUG
-	client_print_color(0, print_chat, "task_swap_score() called")
+	client_print_color(0, 0, "task_swap_score() called")
 	#endif
 	
 	new temp[6]
@@ -2981,7 +3024,7 @@ public task_swap_score()
 			g_iOvertimeScore[CT_OVER_SCORE] = temp[3]
 
 			#if defined DEBUG
-			client_print_color(0, print_chat, "if() called")
+			client_print_color(0, 0, "if() called")
 			#endif
 	}
 	else
@@ -2992,9 +3035,9 @@ public task_swap_score()
 		g_iScore[CT_SCORE] = temp[1]
 
 		#if defined DEBUG
-		client_print_color(0, print_chat, "else() called")
-		client_print_color(0, print_chat, "temp[0] = %i", temp[0])
-		client_print_color(0, print_chat, "temp[1] = %i", temp[1])
+		client_print_color(0, 0, "else() called")
+		client_print_color(0, 0, "temp[0] = %i", temp[0])
+		client_print_color(0, 0, "temp[1] = %i", temp[1])
 		#endif
 	}
 	
@@ -3003,16 +3046,6 @@ public task_swap_score()
 	g_eTeamPause[TERO_PAUSE] = temp[4]
 	g_eTeamPause[CT_PAUSE] = temp[5]
 
-	/*static iPlayer, iPlayers[MAX_PLAYERS], iNum
-	get_players(iPlayers, iNum, "ch")
-
-	for(new i; i < iNum; i++)
-	{
-		iPlayer = iPlayers[i]
-
-		g_iTabScore[PlayerScore][iPlayer] = get_user_frags(i)
-	}*/
-
 	set_pcvar_num(g_cFreezeTime, g_iFreezeTime)
 
 	for(new i; i < ArraySize(g_aPlayerData); i++)
@@ -3020,7 +3053,7 @@ public task_swap_score()
 		ArrayDeleteItem(g_aPlayerData, i)
 	}
 
-	server_cmd("sv_restart 1")
+	rg_round_end(1.0, WINSTATUS_NONE)
 
 	set_task(2.0, "task_change_score")
 }
@@ -3028,30 +3061,19 @@ public task_swap_score()
 public task_change_score()
 {
 	rg_update_teamscores(g_iScore[CT_SCORE], g_iScore[TERO_SCORE], false)
-
-	new iPlayer, iPlayers[MAX_PLAYERS], iNum
-	get_players(iPlayers, iNum, "ch")
-
-	for(new i; i < iNum; i++)
-	{
-		iPlayer = iPlayers[i]
-
-		set_user_frags(iPlayer, g_ePlayerScore[iPlayer][iKILLS])
-		cs_set_user_deaths(iPlayer, g_ePlayerScore[iPlayer][iDEATHS])
-	}
 }
 
 public clcmd_specall(id)
 {
 	if(!(get_user_flags(id) & read_flags(g_ePluginSettings[szAdminAccess])))
 	{
-		client_print_color(id, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "YOU_DONT_HAVE_ACCESS")
+		client_print_color(id, id, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "YOU_DONT_HAVE_ACCESS")
 		return PLUGIN_HANDLED
 	}
 
 	if(g_eBooleans[bIsMixOn])
 	{
-		client_print_color(id, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_NEED_STOPPED")
+		client_print_color(id, id, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_NEED_STOPPED")
 		return PLUGIN_HANDLED
 	}
 
@@ -3066,11 +3088,11 @@ public clcmd_specall(id)
 
 		if(g_eInformations[SPECALL_CALLER] == iPlayer)
 		{
-			client_print_color(iPlayer, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "PLAYERS_MOVED_SPEC_BY_YOU")
+			client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "PLAYERS_MOVED_SPEC_BY_YOU")
 		}
 		else
 		{
-			client_print_color(iPlayer, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "PLAYERS_MOVED_SPEC_BY_X", g_szName[g_eInformations[SPECALL_CALLER]])
+			client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "PLAYERS_MOVED_SPEC_BY_X", g_szName[g_eInformations[SPECALL_CALLER]])
 		}
 
 		rg_join_team(iPlayer, TEAM_SPECTATOR)
@@ -3096,12 +3118,12 @@ public clcmd_restart(id)
 {
 	if(!(get_user_flags(id) & read_flags(g_ePluginSettings[szAdminAccess])))
 	{
-		client_print_color(id, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "YOU_DONT_HAVE_ACCESS")
+		client_print_color(id, id, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "YOU_DONT_HAVE_ACCESS")
 		return PLUGIN_HANDLED
 	}
 	if(!g_eBooleans[bIsMixOn])
 	{
-		client_print_color(id, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_NOT_STARTED_YET")
+		client_print_color(id, id, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_NOT_STARTED_YET")
 		return PLUGIN_HANDLED
 	}
 	
@@ -3129,7 +3151,7 @@ public clcmd_score(id)
 {
 	if(!g_eBooleans[bIsMixOn])
 	{
-		client_print_color(id, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_NOT_STARTED_YET")
+		client_print_color(id, id, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_NOT_STARTED_YET")
 		return PLUGIN_HANDLED
 	}
 
@@ -3137,11 +3159,11 @@ public clcmd_score(id)
 	{
 		if(!g_iStart)
 		{
-			client_print_color(id, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_SCORE_IS", LANG_SERVER, "CT_TEAM", g_iScore[CT_SCORE], LANG_SERVER, "TERO_TEAM", g_iScore[TERO_SCORE])
+			client_print_color(id, id, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_SCORE_IS", LANG_SERVER, "CT_TEAM", g_iScore[CT_SCORE], LANG_SERVER, "TERO_TEAM", g_iScore[TERO_SCORE])
 		}
 		else
 		{
-			client_print_color(id, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_SCORE_IS_WITH_END", LANG_SERVER, "CT_TEAM", g_iScore[CT_SCORE], LANG_SERVER, "TERO_TEAM", g_iScore[TERO_SCORE])
+			client_print_color(id, id, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_SCORE_IS_WITH_END", LANG_SERVER, "CT_TEAM", g_iScore[CT_SCORE], LANG_SERVER, "TERO_TEAM", g_iScore[TERO_SCORE])
 		}
 	}
 
@@ -3149,7 +3171,7 @@ public clcmd_score(id)
 	{
 		if(!g_eOvertime[SecondOvertime] && !g_eBooleans[bTeamSwap])
 		{
-			client_print_color(id, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "FIRST_OVERTIME_SCORE_IS", LANG_SERVER, "CT_TEAM", g_iOvertimeScore[CT_OVER_SCORE], LANG_SERVER, "TERO_TEAM", g_iOvertimeScore[TERO_OVER_SCORE])
+			client_print_color(id, id, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "FIRST_OVERTIME_SCORE_IS", LANG_SERVER, "CT_TEAM", g_iOvertimeScore[CT_OVER_SCORE], LANG_SERVER, "TERO_TEAM", g_iOvertimeScore[TERO_OVER_SCORE])
 		}
 	}
 
@@ -3158,8 +3180,8 @@ public clcmd_score(id)
 		new szTemp[16]
 		LastRoundUntilWin(szTemp, charsmax(szTemp))
 
-		client_print_color(id, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_LAST_ROUND_FOR_X_TEAM", szTemp)
-		client_print_color(id, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_SCORE_IS_WITH_END", LANG_SERVER, "CT_TEAM", g_iScore[CT_SCORE], LANG_SERVER, "TERO_TEAM", g_iScore[TERO_SCORE])
+		client_print_color(id, id, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_LAST_ROUND_FOR_X_TEAM", szTemp)
+		client_print_color(id, id, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_SCORE_IS_WITH_END", LANG_SERVER, "CT_TEAM", g_iScore[CT_SCORE], LANG_SERVER, "TERO_TEAM", g_iScore[TERO_SCORE])
 	}
 
 	return PLUGIN_CONTINUE
@@ -3179,7 +3201,7 @@ stock clcmd_move_ct(id, szMessage[], iLen, IsSay = -1)
 {
 	if(!(get_user_flags(id) & read_flags(g_ePluginSettings[szAdminAccess])))
 	{
-		client_print_color(id, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "YOU_DONT_HAVE_ACCESS")
+		client_print_color(id, id, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "YOU_DONT_HAVE_ACCESS")
 		return PLUGIN_HANDLED
 	}
 
@@ -3195,7 +3217,7 @@ stock clcmd_move_ct(id, szMessage[], iLen, IsSay = -1)
 
 	if(!target)
 	{
-		client_print_color(id, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "PLAYER_NOT_FOUND")
+		client_print_color(id, id, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "PLAYER_NOT_FOUND")
 		return PLUGIN_HANDLED
 	}
 
@@ -3210,15 +3232,15 @@ stock clcmd_move_ct(id, szMessage[], iLen, IsSay = -1)
 
 		if(id == iPlayer)
 		{
-			client_print_color(iPlayer, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "PLAYER_X_MOVED_X_BY_YOU", g_szName[target], szTeam)
+			client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "PLAYER_X_MOVED_X_BY_YOU", g_szName[target], szTeam)
 		}
 		else if(target == iPlayer)
 		{
-			client_print_color(iPlayer, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "YOU_WERE_MOVED_X_BY_X", szTeam, g_szName[id])
+			client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "YOU_WERE_MOVED_X_BY_X", szTeam, g_szName[id])
 		}
 		else
 		{
-			client_print_color(iPlayer, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "PLAYER_X_MOVED_X_BY_X", g_szName[target], szTeam, g_szName[id])
+			client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "PLAYER_X_MOVED_X_BY_X", g_szName[target], szTeam, g_szName[id])
 		}
 	}
 
@@ -3241,7 +3263,7 @@ stock clcmd_move_t(id, szMessage[], iLen, IsSay = -1)
 {
 	if(!(get_user_flags(id) & read_flags(g_ePluginSettings[szAdminAccess])))
 	{
-		client_print_color(id, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "YOU_DONT_HAVE_ACCESS")
+		client_print_color(id, id, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "YOU_DONT_HAVE_ACCESS")
 		return PLUGIN_HANDLED
 	}
 
@@ -3257,7 +3279,7 @@ stock clcmd_move_t(id, szMessage[], iLen, IsSay = -1)
 
 	if(!target)
 	{
-		client_print_color(id, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "PLAYER_NOT_FOUND")
+		client_print_color(id, id, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "PLAYER_NOT_FOUND")
 		return PLUGIN_HANDLED
 	}
 
@@ -3272,15 +3294,15 @@ stock clcmd_move_t(id, szMessage[], iLen, IsSay = -1)
 
 		if(id == iPlayer)
 		{
-			client_print_color(iPlayer, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "PLAYER_X_MOVED_X_BY_YOU", g_szName[target], szTeam)
+			client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "PLAYER_X_MOVED_X_BY_YOU", g_szName[target], szTeam)
 		}
 		else if(target == iPlayer)
 		{
-			client_print_color(iPlayer, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "YOU_WERE_MOVED_X_BY_X", szTeam, g_szName[id])
+			client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "YOU_WERE_MOVED_X_BY_X", szTeam, g_szName[id])
 		}
 		else
 		{
-			client_print_color(iPlayer, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "PLAYER_X_MOVED_X_BY_X", g_szName[target], szTeam, g_szName[id])
+			client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "PLAYER_X_MOVED_X_BY_X", g_szName[target], szTeam, g_szName[id])
 		}
 	}
 
@@ -3303,7 +3325,7 @@ stock clcmd_move_spec(id, szMessage[], iLen, IsSay = -1)
 {
 	if(!(get_user_flags(id) & read_flags(g_ePluginSettings[szAdminAccess])))
 	{
-		client_print_color(id, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "YOU_DONT_HAVE_ACCESS")
+		client_print_color(id, id, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "YOU_DONT_HAVE_ACCESS")
 		return PLUGIN_HANDLED
 	}
 
@@ -3319,7 +3341,7 @@ stock clcmd_move_spec(id, szMessage[], iLen, IsSay = -1)
 
 	if(!target)
 	{
-		client_print_color(id, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "PLAYER_NOT_FOUND")
+		client_print_color(id, id, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "PLAYER_NOT_FOUND")
 		return PLUGIN_HANDLED
 	}
 
@@ -3334,15 +3356,15 @@ stock clcmd_move_spec(id, szMessage[], iLen, IsSay = -1)
 
 		if(id == iPlayer)
 		{
-			client_print_color(iPlayer, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "PLAYER_X_MOVED_X_BY_YOU", g_szName[target], szTeam)
+			client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "PLAYER_X_MOVED_X_BY_YOU", g_szName[target], szTeam)
 		}
 		else if(target == iPlayer)
 		{
-			client_print_color(iPlayer, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "YOU_WERE_MOVED_X_BY_X", szTeam, g_szName[id])
+			client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "YOU_WERE_MOVED_X_BY_X", szTeam, g_szName[id])
 		}
 		else
 		{
-			client_print_color(iPlayer, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "PLAYER_X_MOVED_X_BY_X", g_szName[target], szTeam, g_szName[id])
+			client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "PLAYER_X_MOVED_X_BY_X", g_szName[target], szTeam, g_szName[id])
 		}
 	}
 
@@ -3356,17 +3378,17 @@ public clcmd_start_demo(id)
 {
 	if(!(get_user_flags(id) & read_flags(g_ePluginSettings[szAdminAccess])))
 	{
-		client_print_color(id, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "YOU_DONT_HAVE_ACCESS")
+		client_print_color(id, id, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "YOU_DONT_HAVE_ACCESS")
 		return PLUGIN_HANDLED
 	}
 
 	#if defined DEBUG
-	client_print_color(0, print_chat, "clcmd_start_Demo() called")
+	client_print_color(0, 0, "clcmd_start_Demo() called")
 	#endif
 
 	if(!g_eBooleans[bIsMixOn])
 	{
-		client_print_color(id, print_center, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_NOT_STARTED_YET")
+		client_print_color(id, id, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_NOT_STARTED_YET")
 		return PLUGIN_HANDLED
 	}
 
@@ -3386,7 +3408,7 @@ public clcmd_start_demo(id)
 
 	if(!target)
 	{
-		client_print_color(id, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "PLAYER_NOT_FOUND")
+		client_print_color(id, id, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "PLAYER_NOT_FOUND")
 		return PLUGIN_HANDLED
 	}
 
@@ -3395,7 +3417,7 @@ public clcmd_start_demo(id)
 	{
 		if(len < 2)
 		{
-			client_print_color(id, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "DEMO_NAME_REQUIRED")
+			client_print_color(id, id, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "DEMO_NAME_REQUIRED")
 			return PLUGIN_HANDLED
 		}
 	}
@@ -3411,11 +3433,11 @@ public clcmd_start_demo(id)
 		{
 			if(iPlayer == id)
 			{
-				client_print_color(iPlayer, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "DEMO_STARTED_BY_YOU_FOR_X", g_szName[target])
+				client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "DEMO_STARTED_BY_YOU_FOR_X", g_szName[target])
 			}
 			else
 			{
-				client_print_color(iPlayer, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "DEMO_STARTED_BY_X_FOR_X", g_szName[id], g_szName[target])
+				client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "DEMO_STARTED_BY_X_FOR_X", g_szName[id], g_szName[target])
 			}
 		}
 	}
@@ -3446,17 +3468,17 @@ public clcmd_stop_demo(id)
 {
 	if(!(get_user_flags(id) & read_flags(g_ePluginSettings[szAdminAccess])))
 	{
-		client_print_color(id, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "YOU_DONT_HAVE_ACCESS")
+		client_print_color(id, id, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "YOU_DONT_HAVE_ACCESS")
 		return PLUGIN_HANDLED
 	}
 
 	#if defined DEBUG
-	client_print_color(0, print_chat, "clcmd_stop_Demo() called")
+	client_print_color(0, 0, "clcmd_stop_Demo() called")
 	#endif
 
 	if(!g_eBooleans[bIsMixOn])
 	{
-		client_print_color(id, print_center, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_NOT_STARTED_YET")
+		client_print_color(id, id, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_NOT_STARTED_YET")
 		return PLUGIN_HANDLED
 	}
 
@@ -3471,7 +3493,7 @@ public clcmd_stop_demo(id)
 
 	if(!target)
 	{
-		client_print_color(id, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "PLAYER_NOT_FOUND")
+		client_print_color(id, id, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "PLAYER_NOT_FOUND")
 		return PLUGIN_HANDLED
 	}
 
@@ -3486,11 +3508,11 @@ public clcmd_stop_demo(id)
 		{
 			if(iPlayer == id)
 			{
-				client_print_color(iPlayer, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "DEMO_STOPPED_BY_YOU_FOR_X", g_szName[target])
+				client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "DEMO_STOPPED_BY_YOU_FOR_X", g_szName[target])
 			}
 			else
 			{
-				client_print_color(iPlayer, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "DEMO_STOPPED_BY_X_FOR_X", g_szName[id], g_szName[target])
+				client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "DEMO_STOPPED_BY_X_FOR_X", g_szName[id], g_szName[target])
 			}
 		}
 	}
@@ -3587,7 +3609,7 @@ public clcmd_say_pause(id)
 {
 	if(!g_eBooleans[bIsMixOn])
 	{
-		client_print_color(id, print_center, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_NOT_STARTED_YET")
+		client_print_color(id, id, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_NOT_STARTED_YET")
 		return PLUGIN_HANDLED
 	}
 
@@ -3600,11 +3622,11 @@ public clcmd_say_pause(id)
 			if(!g_eTeamPause[TERO_PAUSE])
 			{
 				g_eTeamPause[TERO_PAUSE] = 1
-				client_print_color(0, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "PLAYER_X_REQUESTED_TIMEOUT", g_szName[id])
+				client_print_color(0, 0, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "PLAYER_X_REQUESTED_TIMEOUT", g_szName[id])
 			}
 			else
 			{
-				client_print_color(id, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "YOUR_TEAM_ALREADY_TIMEOUT")
+				client_print_color(id, id, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "YOUR_TEAM_ALREADY_TIMEOUT")
 			}
 		}
 		case CS_TEAM_CT:
@@ -3612,11 +3634,11 @@ public clcmd_say_pause(id)
 			if(!g_eTeamPause[CT_PAUSE])
 			{
 				g_eTeamPause[CT_PAUSE] = 1
-				client_print_color(0, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "PLAYER_X_REQUESTED_TIMEOUT", g_szName[id])
+				client_print_color(0, 0, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "PLAYER_X_REQUESTED_TIMEOUT", g_szName[id])
 			}
 			else
 			{
-				client_print_color(id, print_chat, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "YOUR_TEAM_ALREADY_TIMEOUT")
+				client_print_color(id, id, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "YOUR_TEAM_ALREADY_TIMEOUT")
 			}
 		}
 	}
@@ -3631,9 +3653,10 @@ public task_load(id)
 
 	LoadData(id)
 }
+
 public LoadData(id)
 {
-	new szQuery[68];
+	new szQuery[100];
 	formatex(szQuery, charsmax(szQuery), "SELECT * FROM `%s` WHERE `SteamID` = ^"%s^";", g_ePluginSettings[szTable], g_szAuthID[id])
 
 	new index[2]
@@ -3684,7 +3707,7 @@ public QueryLoadData(iFailState, Handle:iQuery, szError[], iErrorCode, szData[])
 		`Wins`,\
 		`Lose`, \
 		`Online` \
-		) VALUES ('%s', ^"%s^", '0', '0', '0', '0', '0', '1');", g_ePluginSettings[szTable], g_szAuthID[id], g_szName[id]);
+		) VALUES ('%s', ^"%s^", '%d', '0', '0', '0', '0', '1');", g_ePluginSettings[szTable], g_szAuthID[id], g_szName[id], g_ePluginSettings[iStartPoints]);
 
 	SQL_ThreadQuery(g_hSqlTuple, "LoadPData", szQuery, szData, strlen(szData));
 
@@ -3716,34 +3739,23 @@ public LoadPData(iFailState, Handle:iQuery, szError[], iErrorCode, szData[])
 
 public SaveData(id, bool:bDisconnect)
 {
+	if(!g_bLoadedPlayer[id])
+		return
+
 	ExecuteForward(g_eForwards[Save], g_iRet, id)
 
-	new szQuery[220]
+	new szQuery[300]
 	formatex(szQuery, charsmax(szQuery), "UPDATE `%s` \
 		SET `Points`='%d', \
 		`Name`=^"%s^", \
 		`Kills`='%d', \
 		`Deaths`='%d', \
 		`Wins`='%d', \
-		`Lose`='%d' \
-		WHERE `SteamID`=^"%s^";", g_ePluginSettings[szTable], g_iPoints[id], g_szName[id], g_iKills[id], g_iDeaths[id], g_iWins[id], g_iLose[id], g_szAuthID[id])
+		`Lose`='%d', \
+		`Online`='%d' \
+		WHERE `SteamID`=^"%s^";", g_ePluginSettings[szTable], g_iPoints[id], g_szName[id], g_iKills[id], g_iDeaths[id], g_iWins[id], g_iLose[id], bDisconnect ? 0 : 1, g_szAuthID[id])
 
 	SQL_ThreadQuery(g_hSqlTuple, "QueryHandler", szQuery, szQuery, charsmax(szQuery));
-
-	if(bDisconnect)
-	{
-		formatex(szQuery, charsmax(szQuery), "UPDATE `%s` SET `Online`='0' WHERE `SteamID`=^"%s^";", g_ePluginSettings[szTable], g_szAuthID[id]);
-
-
-		new Handle:iQuery = SQL_PrepareQuery(g_iSqlConnection, szQuery)
-				
-		if(!SQL_Execute(iQuery))
-		{
-			SQL_QueryError(iQuery, g_szSqlError, charsmax(g_szSqlError))
-			log_to_file("mix_system.log", g_szSqlError)
-			SQL_FreeHandle(iQuery)
-		}
-	}
 }
 
 public QueryHandler(iFailState, Handle:iQuery, szError[], iErrorCode, szQuery[])
@@ -3905,10 +3917,8 @@ stock CheckOvertimePhase()
 		}
 	}
 
-	g_eBooleans[bCanShowStats] = false
-
 	#if defined DEBUG
-	client_print_color(0, print_chat, "CheckOvertimePhase() called")
+	client_print_color(0, 0, "CheckOvertimePhase() called")
 	#endif
 }
 
@@ -4025,7 +4035,7 @@ stock GiveTeamReward(iPlayer, iPoints)
 {
 	if(IsLastRound() || OvertimeFinished())
 	{
-		client_print_color(iPlayer, print_chat, "^4%s ^1%L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_YOUR_TEAM_WON", g_ePointSystem[PointsTeamWin])
+		client_print_color(iPlayer, iPlayer, "^4%s ^1%L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_YOUR_TEAM_WON", g_ePointSystem[PointsTeamWin])
 	
 		g_iPoints[iPlayer] += iPoints
 	}
@@ -4085,6 +4095,32 @@ stock _MenuDisplay(id, menu)
 stock mysql_escape_string(const source[], dest[], length)
 {
 	SQL_QuoteString(Empty_Handle, dest, length, source)
+}
+
+stock SetGameDesc(MatchState:matchState)
+{
+	new szTemp[30]
+	switch(matchState)
+	{
+		case MATCHSTATE_WARM:
+		{
+			formatex(szTemp, charsmax(szTemp), "%L", LANG_SERVER, "MATCHSTATE_WARM")
+		}
+		case MATCHSTATE_IN_MATCH:
+		{
+			formatex(szTemp, charsmax(szTemp), "%L", LANG_SERVER, "MATCHSTATE_IN_MATCH", g_iScore[CT_SCORE], g_iScore[TERO_SCORE])
+		}
+		case MATCHSTATE_KNIFE_ROUND:
+		{
+			formatex(szTemp, charsmax(szTemp), "%L", LANG_SERVER, "MATCHSTATE_KNIFE_ROUND")
+		}
+		case MATCHSTATE_OVERTIME:
+		{
+			formatex(szTemp, charsmax(szTemp), "%L", LANG_SERVER, "MATCHSTATE_OVERTIME", g_iOvertimeScore[CT_OVER_SCORE], g_iOvertimeScore[TERO_OVER_SCORE])
+		}
+	}
+
+	set_member_game(m_GameDesc, szTemp)
 }
 
 public native_is_half(iPluginID, iParamNum)
