@@ -2994,17 +2994,39 @@ public task_delayed_swap()
 	new iPlayer, iPlayers[MAX_PLAYERS], iNum
 	get_players(iPlayers, iNum, "ch")
 
+	rg_swap_all_players()
+
+	new szDefaultWeap[48]
+
 	for(new i; i < iNum; i++)
 	{
 		iPlayer = iPlayers[i]
 
 		g_ePlayerScore[iPlayer][iKILLS] = get_user_frags(iPlayer)
 		g_ePlayerScore[iPlayer][iDEATHS] = get_user_deaths(iPlayer)
+		rg_add_account(iPlayer, get_cvar_num("mp_startmoney"), AS_SET)
+		rg_remove_all_items(iPlayer, true)
+		rg_give_item(iPlayer, "weapon_knife")
+
+		switch(get_member(iPlayer, m_iTeam))
+		{
+			case TEAM_TERRORIST:
+			{
+				get_cvar_string("mp_t_default_weapons_secondary", szDefaultWeap, charsmax(szDefaultWeap))
+			}
+			case TEAM_CT:
+			{
+				get_cvar_string("mp_ct_default_weapons_secondary", szDefaultWeap, charsmax(szDefaultWeap))
+			}
+		}
+
+		format(szDefaultWeap, charsmax(szDefaultWeap), "weapon_%s", szDefaultWeap)
+		rg_give_item(iPlayer, szDefaultWeap)
+		new WeaponIdType:wid = rg_get_weapon_info(szDefaultWeap, WI_ID)
+		rg_set_user_bpammo(iPlayer, wid, rg_get_global_iteminfo(wid, ItemInfo_iMaxClip) * 2)
 	}
 
-	rg_swap_all_players()
-
-	rg_round_end(1.0, WINSTATUS_NONE)
+	rg_round_end(1.0, WINSTATUS_NONE, ROUND_GAME_OVER)
 }
 
 public task_swap_score()
