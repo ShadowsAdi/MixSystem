@@ -42,7 +42,7 @@
 #define PLUGIN  "Mix System ~ Fastcup Mode"
 #endif
 
-#define VERSION "2.19.3"
+#define VERSION "2.19.4"
 #define AUTHOR  "Shadows Adi"
 
 #define IsPlayer(%1)				((1 <= %1 <= MAX_PLAYERS) && is_user_connected(%1))
@@ -89,6 +89,7 @@ new const PAUSE_TIME[]			=		"PAUSE_DURATION"
 new const TEN_REQUIRED[]		=		"START_TEN_REQUIRED"
 new const KNIFE_ROUND_DELAY[]	=		"KNIFE_ROUND_START_DELAY"
 new const DEFAULT_POINTS[]		=		"DEFAULT_START_POINTS"
+new const FORCE_WARMUP[]		=		"FORCE_WARMUP"
 new const SHOW_COMMANDS[]		=		"SHOW_COMMANDS"
 new const START_COMMANDS[]		=		"START_MIX_COMMANDS"
 new const STOP_COMMANDS[]		=		"STOP_MIX_COMMANDS"
@@ -179,6 +180,7 @@ enum _:Settings
 	bool:bRequireTen,
 	iKnifeStartDelay,
 	iStartPoints,
+	bool:bForceWarmup,
 	#if defined POINTS_SYS
 	szStopCfg[32],
 	szHostname[48],
@@ -751,7 +753,7 @@ ReadConfig()
 						}
 						else if (equal(szString, TEN_REQUIRED))
 						{
-							g_ePluginSettings[bRequireTen] = bool:str_to_num(szValue)
+							g_ePluginSettings[bRequireTen] = bool:clamp(str_to_num(szValue), 0, 1) 
 						}
 						else if (equal(szString, KNIFE_ROUND_DELAY))
 						{
@@ -760,6 +762,10 @@ ReadConfig()
 						else if (equal(szString, DEFAULT_POINTS))
 						{
 							g_ePluginSettings[iStartPoints] = str_to_num(szValue)
+						}
+						else if (equal(szString, FORCE_WARMUP))
+						{
+							g_ePluginSettings[bForceWarmup] = bool:clamp(str_to_num(szValue), 0, 1) 
 						}
 					}
 				}
@@ -1864,17 +1870,24 @@ public clcmd_stopmix(id)
 
 public clcmd_warm(id)
 {
-	if(!(get_user_flags(id) & read_flags(g_ePluginSettings[szAdminAccess])))
+	if(is_user_connected(id))
 	{
-		client_print_color(id, id, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "YOU_DONT_HAVE_ACCESS")
-		return PLUGIN_HANDLED
+		if(!(get_user_flags(id) & read_flags(g_ePluginSettings[szAdminAccess])))
+		{
+			client_print_color(id, id, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "YOU_DONT_HAVE_ACCESS")
+			return PLUGIN_HANDLED
+		}
 	}
 
-	if(g_eBooleans[bIsMixOn] || g_eBooleans[bIsKnife])
+	if(g_eBooleans[bIsMixOn] || g_eBooleans[bIsKnife] || task_exists(TASK_CHECKVOTES))
 	{
-		client_print_color(id, id, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_NEED_STOPPED")
+		if(is_user_connected(id))
+		{
+			client_print_color(id, id, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_NEED_STOPPED")
+		}
 		return PLUGIN_HANDLED
 	}
+	
 
 	static iPlayer, iPlayers[MAX_PLAYERS], iNum
 	get_players(iPlayers, iNum, "ch")
@@ -1891,7 +1904,8 @@ public clcmd_warm(id)
 		}
 		else
 		{
-			client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "WARM_STARTED_BY_X", g_szName[g_eInformations[WARM_CALLER]])
+			client_print_color(iPlayer, iPlayer, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "WARM_STARTED_BY_X", strlen(g_szName[g_eInformations[WARM_CALLER]]) ? 
+			                   g_szName[g_eInformations[WARM_CALLER]] : "Server")
 		}
 
 		set_task(2.0, "Task_Warmup", iPlayer + TASK_WARM)
@@ -2115,6 +2129,10 @@ public task_end_round(index)
 
 	if(g_eBooleans[bIsMixOn])
 		SetGameDesc(g_eBooleans[bOvertime] ? MATCHSTATE_OVERTIME : MATCHSTATE_IN_MATCH)
+	else if(g_ePluginSettings[bForceWarmup] && !g_eBooleans[bIsWarm])
+	{
+		clcmd_warm(0)
+	}
 
 	if(g_iKnifes == 2)
 	{
@@ -3011,6 +3029,7 @@ public task_delayed_swap()
 		g_ePlayerScore[iPlayer][iDEATHS] = get_user_deaths(iPlayer)
 		rg_add_account(iPlayer, get_cvar_num("mp_startmoney"), AS_SET)
 		rg_remove_all_items(iPlayer, true)
+		rg_set_user_armor(iPlayer, 0, ARMOR_VESTHELM)
 		rg_give_item(iPlayer, "weapon_knife")
 
 		switch(iTeam)
