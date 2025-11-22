@@ -42,7 +42,7 @@
 #define PLUGIN  "Mix System ~ Fastcup Mode"
 #endif
 
-#define VERSION "2.19.2"
+#define VERSION "2.19.3"
 #define AUTHOR  "Shadows Adi"
 
 #define IsPlayer(%1)				((1 <= %1 <= MAX_PLAYERS) && is_user_connected(%1))
@@ -3002,13 +3002,18 @@ public task_delayed_swap()
 	{
 		iPlayer = iPlayers[i]
 
+		new TeamName:iTeam = get_member(iPlayer, m_iTeam)
+
+		if(iTeam == TEAM_UNASSIGNED || iTeam == TEAM_SPECTATOR)
+			continue 
+
 		g_ePlayerScore[iPlayer][iKILLS] = get_user_frags(iPlayer)
 		g_ePlayerScore[iPlayer][iDEATHS] = get_user_deaths(iPlayer)
 		rg_add_account(iPlayer, get_cvar_num("mp_startmoney"), AS_SET)
 		rg_remove_all_items(iPlayer, true)
 		rg_give_item(iPlayer, "weapon_knife")
 
-		switch(get_member(iPlayer, m_iTeam))
+		switch(iTeam)
 		{
 			case TEAM_TERRORIST:
 			{
@@ -3023,6 +3028,10 @@ public task_delayed_swap()
 		format(szDefaultWeap, charsmax(szDefaultWeap), "weapon_%s", szDefaultWeap)
 		rg_give_item(iPlayer, szDefaultWeap)
 		new WeaponIdType:wid = rg_get_weapon_info(szDefaultWeap, WI_ID)
+
+		if(!wid)
+			continue
+
 		rg_set_user_bpammo(iPlayer, wid, rg_get_global_iteminfo(wid, ItemInfo_iMaxClip) * 2)
 	}
 
