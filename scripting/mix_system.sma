@@ -42,7 +42,7 @@
 #define PLUGIN  "Mix System ~ Fastcup Mode"
 #endif
 
-#define VERSION "2.19.4"
+#define VERSION "2.19.5"
 #define AUTHOR  "Shadows Adi"
 
 #define IsPlayer(%1)				((1 <= %1 <= MAX_PLAYERS) && is_user_connected(%1))
@@ -1665,7 +1665,7 @@ public clcmd_startmix(id, bool:bKnife)
 		return PLUGIN_HANDLED
 	}
 
-	if(g_eBooleans[bIsMixOn])
+	if(g_eBooleans[bIsMixOn] || g_eBooleans[bIsKnife])
 	{
 		client_print_color(id, id, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_ALREADY_STARTED")
 		return PLUGIN_HANDLED
@@ -1810,7 +1810,7 @@ public clcmd_stopmix(id)
 	client_print_color(0, 0, "clcmd_stopmix() called")
 	#endif
 
-	if(!g_eBooleans[bIsMixOn])
+	if(!g_eBooleans[bIsKnife] && !g_eBooleans[bIsMixOn])
 	{
 		client_print_color(id, id, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_NOT_STARTED_YET")
 		return PLUGIN_HANDLED
@@ -3027,9 +3027,12 @@ public task_delayed_swap()
 
 		g_ePlayerScore[iPlayer][iKILLS] = get_user_frags(iPlayer)
 		g_ePlayerScore[iPlayer][iDEATHS] = get_user_deaths(iPlayer)
+		set_member_game(m_bCTCantBuy, true)
+		set_member_game(m_bTCantBuy, true)
+		set_member_game(m_bCompleteReset, true)
 		rg_add_account(iPlayer, get_cvar_num("mp_startmoney"), AS_SET)
 		rg_remove_all_items(iPlayer, true)
-		rg_set_user_armor(iPlayer, 0, ARMOR_VESTHELM)
+		rg_set_user_armor(iPlayer, 0, ARMOR_NONE)
 		rg_give_item(iPlayer, "weapon_knife")
 
 		switch(iTeam)
@@ -3055,6 +3058,15 @@ public task_delayed_swap()
 	}
 
 	rg_round_end(1.0, WINSTATUS_NONE, ROUND_GAME_OVER)
+
+	set_task(1.2, "task_delayed_members")
+}
+
+public task_delayed_members()
+{
+	set_member_game(m_bCTCantBuy, false)
+	set_member_game(m_bTCantBuy, false)
+	set_member_game(m_bCompleteReset, false)
 }
 
 public task_swap_score()
@@ -3102,8 +3114,6 @@ public task_swap_score()
 	{
 		ArrayDeleteItem(g_aPlayerData, i)
 	}
-
-	rg_round_end(1.0, WINSTATUS_NONE)
 
 	set_task(2.0, "task_change_score")
 }
@@ -3845,6 +3855,8 @@ ResetScore()
 	g_eBooleans[bIsWarm] = false
 	g_eOvertime[FirstOvertime] = false
 	g_eOvertime[SecondOvertime] = false
+	g_eBooleans[bIsKnife] = false
+
 	#if defined FASTCUP_MODE
 	g_bVoted = false
 	arrayset(g_iAnswer, 0, sizeof(g_iAnswer))
