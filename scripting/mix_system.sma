@@ -42,7 +42,7 @@
 #define PLUGIN  "Mix System ~ Fastcup Mode"
 #endif
 
-#define VERSION "2.19.5"
+#define VERSION "2.19.6"
 #define AUTHOR  "Shadows Adi"
 
 #define IsPlayer(%1)				((1 <= %1 <= MAX_PLAYERS) && is_user_connected(%1))
@@ -3027,9 +3027,9 @@ public task_delayed_swap()
 
 		g_ePlayerScore[iPlayer][iKILLS] = get_user_frags(iPlayer)
 		g_ePlayerScore[iPlayer][iDEATHS] = get_user_deaths(iPlayer)
+		SetMembers()
 		set_member_game(m_bCTCantBuy, true)
 		set_member_game(m_bTCantBuy, true)
-		set_member_game(m_bCompleteReset, true)
 		rg_add_account(iPlayer, get_cvar_num("mp_startmoney"), AS_SET)
 		rg_remove_all_items(iPlayer, true)
 		rg_set_user_armor(iPlayer, 0, ARMOR_NONE)
@@ -3062,11 +3062,22 @@ public task_delayed_swap()
 	set_task(1.2, "task_delayed_members")
 }
 
+public SetMembers()
+{
+	// https://github.com/rehlds/ReGameDLL_CS/blob/master/regamedll/dlls/multiplay_gamerules.cpp#L1967-L1978
+	set_member_game(m_iAccountTerrorist, 0)
+	set_member_game(m_iAccountCT, 0)
+	set_member_game(m_iNumTerroristWins, 0)
+	set_member_game(m_iNumCTWins, 0)
+	set_member_game(m_iNumConsecutiveTerroristLoses, 0)
+	set_member_game(m_iNumConsecutiveCTLoses, 0)
+	set_member_game(m_iLoserBonus, rg_get_account_rules(RR_LOSER_BONUS_DEFAULT))
+}
+
 public task_delayed_members()
 {
 	set_member_game(m_bCTCantBuy, false)
 	set_member_game(m_bTCantBuy, false)
-	set_member_game(m_bCompleteReset, false)
 }
 
 public task_swap_score()
