@@ -42,7 +42,7 @@
 #define PLUGIN  "Mix System ~ Fastcup Mode"
 #endif
 
-#define VERSION "2.19.6"
+#define VERSION "2.19.7"
 #define AUTHOR  "Shadows Adi"
 
 #define IsPlayer(%1)				((1 <= %1 <= MAX_PLAYERS) && is_user_connected(%1))
@@ -1169,7 +1169,7 @@ public DatabaseConnect()
 
 	if(g_iSqlConnection == Empty_Handle)
 	{
-		log_to_file("mix_system.log", "%s Failed to connect to database. Make sure databse settings are right!", g_ePluginSettings[szPrefix])
+		log_to_file("mix_system.log", "%s Failed to connect to database. Make sure databse settings are right! Error: %s", g_ePluginSettings[szPrefix], g_szSqlError)
 		return 
 	}
 
@@ -1301,7 +1301,7 @@ public RG_Weapon_Remove(iEnt, const szModelName[])
 
 public RG_CSGameRules_CanHavePlayerItem_Pre(id, item)
 {
-	if(g_eBooleans[bIsKnife])
+	if(g_eBooleans[bIsKnife] || get_member_game(m_bCTCantBuy) || get_member_game(m_bTCantBuy))
 	{
 		if(get_member(item, m_iId) == WEAPON_KNIFE)
 			return
