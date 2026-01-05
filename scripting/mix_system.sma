@@ -42,7 +42,7 @@
 #define PLUGIN  "Mix System ~ Fastcup Mode"
 #endif
 
-#define VERSION "2.19.7"
+#define VERSION "2.19.8"
 #define AUTHOR  "Shadows Adi"
 
 #define IsPlayer(%1)				((1 <= %1 <= MAX_PLAYERS) && is_user_connected(%1))
@@ -62,7 +62,8 @@ enum (+=1200)
 	#endif
 	TASK_SPECALL,
 	TASK_LOAD,
-	TASK_COUNT_DURATION
+	TASK_COUNT_DURATION,
+	TASK_GIVE_EQUIPMENT
 }
 
 enum MatchState
@@ -181,15 +182,13 @@ enum _:Settings
 	iKnifeStartDelay,
 	iStartPoints,
 	bool:bForceWarmup,
-	#if defined POINTS_SYS
 	szStopCfg[32],
+	#if defined POINTS_SYS
 	szHostname[48],
 	szUsername[48],
 	szPassword[48],
 	szDatabaseName[32],
 	szTable[32],
-	#else
-	szStopCfg[32]
 	#endif
 }
 
@@ -451,6 +450,8 @@ new g_iDuration
 new g_iRet
 
 new Regex:g_rePattern
+
+new g_szConfigsDir[48]
 
 public plugin_init()
 {
@@ -3014,8 +3015,6 @@ public task_delayed_swap()
 
 	rg_swap_all_players()
 
-	new szDefaultWeap[48]
-
 	for(new i; i < iNum; i++)
 	{
 		iPlayer = iPlayers[i]
@@ -3032,29 +3031,8 @@ public task_delayed_swap()
 		set_member_game(m_bTCantBuy, true)
 		rg_add_account(iPlayer, get_cvar_num("mp_startmoney"), AS_SET)
 		rg_remove_all_items(iPlayer, true)
-		rg_set_user_armor(iPlayer, 0, ARMOR_NONE)
-		rg_give_item(iPlayer, "weapon_knife")
 
-		switch(iTeam)
-		{
-			case TEAM_TERRORIST:
-			{
-				get_cvar_string("mp_t_default_weapons_secondary", szDefaultWeap, charsmax(szDefaultWeap))
-			}
-			case TEAM_CT:
-			{
-				get_cvar_string("mp_ct_default_weapons_secondary", szDefaultWeap, charsmax(szDefaultWeap))
-			}
-		}
-
-		format(szDefaultWeap, charsmax(szDefaultWeap), "weapon_%s", szDefaultWeap)
-		rg_give_item(iPlayer, szDefaultWeap)
-		new WeaponIdType:wid = rg_get_weapon_info(szDefaultWeap, WI_ID)
-
-		if(!wid)
-			continue
-
-		rg_set_user_bpammo(iPlayer, wid, rg_get_global_iteminfo(wid, ItemInfo_iMaxClip) * 2)
+		set_task(1.4, "task_give_equipment", iPlayer + TASK_GIVE_EQUIPMENT)
 	}
 
 	rg_round_end(1.0, WINSTATUS_NONE, ROUND_GAME_OVER)
@@ -3078,6 +3056,46 @@ public task_delayed_members()
 {
 	set_member_game(m_bCTCantBuy, false)
 	set_member_game(m_bTCantBuy, false)
+}
+
+public task_give_equipment(iPlayer)
+{
+	iPlayer -= TASK_GIVE_EQUIPMENT
+
+	if(!is_user_alive(iPlayer))
+		return
+
+	new szDefaultWeap[48]
+
+	new TeamName:iTeam = get_member(iPlayer, m_iTeam)
+
+	if(iTeam == TEAM_UNASSIGNED || iTeam == TEAM_SPECTATOR)
+		return 
+
+	rg_remove_all_items(iPlayer, false)
+	rg_set_user_armor(iPlayer, 0, ARMOR_NONE)
+	rg_give_item(iPlayer, "weapon_knife")
+
+	switch(iTeam)
+	{
+		case TEAM_TERRORIST:
+		{
+			get_cvar_string("mp_t_default_weapons_secondary", szDefaultWeap, charsmax(szDefaultWeap))
+		}
+		case TEAM_CT:
+		{
+			get_cvar_string("mp_ct_default_weapons_secondary", szDefaultWeap, charsmax(szDefaultWeap))
+		}
+	}
+
+	format(szDefaultWeap, charsmax(szDefaultWeap), "weapon_%s", szDefaultWeap)
+	rg_give_item(iPlayer, szDefaultWeap)
+	new WeaponIdType:wid = rg_get_weapon_info(szDefaultWeap, WI_ID)
+
+	if(!wid)
+		return
+
+	rg_set_user_bpammo(iPlayer, wid, rg_get_global_iteminfo(wid, ItemInfo_iMaxClip) * 2)
 }
 
 public task_swap_score()
@@ -3877,25 +3895,31 @@ ResetScore()
 
 stock StartConfig()
 {
-	static szConfigsDir[48]
-	get_configsdir(szConfigsDir, charsmax(szConfigsDir))
-	server_cmd("exec %s/%s", szConfigsDir, g_ePluginSettings[szStartCfg])
+	GetConfigsDir()
+	
+	server_cmd("exec %s/%s", g_szConfigsDir, g_ePluginSettings[szStartCfg])
 }
 
 stock StopConfig()
 {
-	new szConfigsDir[48]
-	get_configsdir(szConfigsDir, charsmax(szConfigsDir))
+	GetConfigsDir()
 
-	server_cmd("exec %s/%s", szConfigsDir, g_ePluginSettings[szStopCfg])
+	server_cmd("exec %s/%s", g_szConfigsDir, g_ePluginSettings[szStopCfg])
 }
 
 stock OvertimeConfig()
 {
-	new szConfigsDir[48]
-	get_configsdir(szConfigsDir, charsmax(szConfigsDir))
+	GetConfigsDir()
 
-	server_cmd("exec %s/overtime.cfg", szConfigsDir)
+	server_cmd("exec %s/%s", g_szConfigsDir, g_ePluginSettings[szOvertimeCfg])
+}
+
+stock GetConfigsDir()
+{
+	if(g_szConfigsDir[0] == EOS)
+	{
+		get_configsdir(g_szConfigsDir, charsmax(g_szConfigsDir))
+	}
 }
 
 stock bool:is_bot(id)
