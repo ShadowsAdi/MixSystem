@@ -3,7 +3,7 @@
 ---
 
 > [!IMPORTANT]
-> Requirements:
+> Requirements: 
 > - AmxModX 1.9.0-5271+
 > - ReHLDS  v3.13.0.788+
 > - ReGameDLL v5.26.0.668+
