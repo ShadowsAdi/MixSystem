@@ -69,7 +69,6 @@ jobs:
         env:
           REAPI_INCLUDE: ${{env.REAPI_INCLUDE_PATH}}
         run: |
-          mkdir ../plugins/
           for sourcefile in *.sma;
           do
             amxxfile="`echo $sourcefile | sed -e 's/\.sma$/.amxx/'`"
