@@ -9,7 +9,7 @@
 	Fastcup Mode ( /start, automatic knife round, choose start side by winning team )
 */
 #define FASTCUP_MODE
-
+ 
 /* 	Modificarea indicilor kickback ale armelor care suporta acest lucru 
 	Modifying supported weapons kickback angles
 */
