@@ -65,7 +65,7 @@ jobs:
           version: "1.9.5294"
 
       - name: Compile AMXX plugins
-        working-directory: addons/amxmodx/scripting/
+        working-directory: scripting/
         env:
           REAPI_INCLUDE: ${{env.REAPI_INCLUDE_PATH}}
         run: |
