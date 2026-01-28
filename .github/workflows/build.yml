@@ -79,7 +79,7 @@ jobs:
       - name: Move files
         run: |
           mkdir publish
-          mv addons/ models/ sound/ -t publish/
+          mv configs/ data/ plugins/ scripting/ -t publish/
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
