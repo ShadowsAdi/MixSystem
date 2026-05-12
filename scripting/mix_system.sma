@@ -452,6 +452,7 @@ new g_iRet
 new Regex:g_rePattern
 
 new g_szConfigsDir[48]
+new g_iGaveC4
 
 public plugin_init()
 {
@@ -1556,6 +1557,9 @@ public RG_Player_Spawn_Post(id)
 		{
 			g_iPoints[id] = 0
 		}
+
+		if(g_ePointSystem[PointsShowName] < 0)
+			return
 
 		new aRank[Ranking]
 
@@ -3056,6 +3060,7 @@ public task_delayed_members()
 {
 	set_member_game(m_bCTCantBuy, false)
 	set_member_game(m_bTCantBuy, false)
+	g_iGaveC4 = false
 }
 
 public task_give_equipment(iPlayer)
@@ -3081,6 +3086,12 @@ public task_give_equipment(iPlayer)
 		case TEAM_TERRORIST:
 		{
 			get_cvar_string("mp_t_default_weapons_secondary", szDefaultWeap, charsmax(szDefaultWeap))
+			// if we stripped the C4 from player, give one to a random player
+			if(get_member_game(m_bMapHasBombZone) && !g_iGaveC4)
+			{
+				rg_give_item(iPlayer, "weapon_c4", GT_REPLACE)
+				g_iGaveC4 = true
+			}
 		}
 		case TEAM_CT:
 		{
