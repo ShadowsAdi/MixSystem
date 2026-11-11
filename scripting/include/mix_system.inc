@@ -140,6 +140,37 @@ native Mix_HasPointsSys()
 native Mix_GetPointsTable(szTable[], iLen)
 
 /**
+ * Starts the mix, same as an admin typing /start. The server is the starter.
+ *
+ * @param bKnife    Fastcup mode only: if true, starts like /start (knife round first),
+ *                  if false, skips the knife round. Ignored without Fastcup mode.
+ * @type            Boolean
+ *
+ * @return          True if the mix (or its knife round) started, false if a mix
+ *                  is already running or the start conditions are not met.
+ */
+native bool:Mix_StartMatch(bool:bKnife = true)
+
+/**
+ * Stops the mix or the knife round, same as an admin typing /stop.
+ *
+ * @noparam
+ * @type            Boolean
+ *
+ * @return          True if it was stopped, false if nothing was running.
+ */
+native bool:Mix_StopMatch()
+
+/**
+ * Returns if knife round is started.
+ *
+ * @noparam
+ * @type            Boolean
+ * @return          True if it is, false otherwise.
+ */
+native bool:Mix_IsKnife()
+
+/**
  * Called when a player is killed during a game.
  *
  * @param id                    Killer index.
