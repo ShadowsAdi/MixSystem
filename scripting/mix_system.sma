@@ -568,6 +568,9 @@ public plugin_natives()
 	register_native("Mix_GetPointsTable", "native_get_points_table")
 	#endif
 	register_native("Mix_HasPointsSys", "native_has_points_sys")
+	register_native("Mix_StartMatch", "native_start_match")
+	register_native("Mix_StopMatch", "native_stop_match")
+	register_native("Mix_IsKnife", "native_is_knife")
 }
 
 public plugin_end()
@@ -1676,25 +1679,25 @@ public clcmd_startmix(id, bool:bKnife)
 		return PLUGIN_HANDLED
 	}
 
+	return StartMix(id, bKnife)
+}
+
+StartMix(id, bool:bKnife)
+{
+	#if !defined FASTCUP_MODE
+	#pragma unused bKnife
+	#endif
+
 	if(g_eBooleans[bIsMixOn] || g_eBooleans[bIsKnife])
 	{
 		client_print_color(id, id, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_ALREADY_STARTED")
 		return PLUGIN_HANDLED
 	}
 
-	if(g_ePluginSettings[bRequireTen])
+	if(!HasEnoughPlayers())
 	{
-		new iTemp[7]
-		rg_initialize_player_counts(iTemp[0], iTemp[1], iTemp[2], iTemp[3])
-		iTemp[4] = iTemp[0] + iTemp[2]
-		iTemp[5] = iTemp[1] + iTemp[3]
-		iTemp[6] = iTemp[5] + iTemp[4]
-
-		if(iTemp[6] < 10)
-		{
-			client_print_color(id, id, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_NEEDS_TEN_PLAYERS")
-			return PLUGIN_HANDLED
-		}
+		client_print_color(id, id, "^4%s %L", g_ePluginSettings[szPrefix], LANG_SERVER, "MIX_NEEDS_TEN_PLAYERS")
+		return PLUGIN_HANDLED
 	}
 
 	#if defined FASTCUP_MODE
@@ -1809,6 +1812,25 @@ public clcmd_startmix(id, bool:bKnife)
 	return PLUGIN_CONTINUE
 }
 
+stock bool:HasEnoughPlayers()
+{
+	if(g_ePluginSettings[bRequireTen])
+	{
+		new iTemp[7]
+		rg_initialize_player_counts(iTemp[0], iTemp[1], iTemp[2], iTemp[3])
+		iTemp[4] = iTemp[0] + iTemp[2]
+		iTemp[5] = iTemp[1] + iTemp[3]
+		iTemp[6] = iTemp[5] + iTemp[4]
+
+		if(iTemp[6] < 10)
+		{
+			return false
+		}
+	}
+
+	return true
+}
+
 public clcmd_stopmix(id)
 {
 	if(!(get_user_flags(id) & read_flags(g_ePluginSettings[szAdminAccess])))
@@ -1817,6 +1839,11 @@ public clcmd_stopmix(id)
 		return PLUGIN_HANDLED
 	}
 
+	return StopMix(id)
+}
+
+StopMix(id)
+{
 	#if defined DEBUG
 	client_print_color(0, 0, "clcmd_stopmix() called")
 	#endif
@@ -4407,4 +4434,45 @@ public native_has_points_sys(iPluginID, iParamNum)
 	#else
 	return false
 	#endif
+}
+
+public native_start_match(iPluginID, iParamNum)
+{
+	if(g_eBooleans[bIsMixOn] || g_eBooleans[bIsKnife] || !HasEnoughPlayers())
+	{
+		return false
+	}
+
+	#if defined FASTCUP_MODE
+	if(task_exists(TASK_CHECKVOTES))
+	{
+		return false
+	}
+
+	if(!get_param(1))
+	{
+		g_eBooleans[bWasKnife] = true
+	}
+	#endif
+
+	StartMix(0, true)
+
+	return g_eBooleans[bIsMixOn] || g_eBooleans[bIsKnife]
+}
+
+public native_stop_match(iPluginID, iParamNum)
+{
+	if(!g_eBooleans[bIsKnife] && !g_eBooleans[bIsMixOn])
+	{
+		return false
+	}
+
+	StopMix(0)
+
+	return true
+}
+
+public native_is_knife(iPluginID, iParamNum)
+{
+	return g_eBooleans[bIsKnife]
 }
